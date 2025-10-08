@@ -16,7 +16,7 @@ import { styled } from '@mui/material/styles';
 import ForgotPassword from '../components/ForgotPassword';
 import AppTheme from '../theme/AppTheme';
 import ColorModeSelect from '../theme/ColorModeSelect';
-import { GoogleIcon, FacebookIcon, SitemarkIcon } from '../components/CustomIcons';
+import { GoogleIcon, FacebookIcon,BioClockInLogo } from '../components/CustomIcons';
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -120,7 +120,7 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
       <SignInContainer direction="column" justifyContent="space-between">
         <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
         <Card variant="outlined">
-          <SitemarkIcon />
+           <BioClockInLogo size={20}/>
           <Typography
             component="h1"
             variant="h4"
