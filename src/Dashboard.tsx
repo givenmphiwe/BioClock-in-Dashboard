@@ -6,19 +6,26 @@ import { alpha } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import React from 'react';
+
 import AppNavbar from './components/AppNavbar';
 import Header from './components/Header';
 import MainGrid from './components/MainGrid';
 import SideMenu from './components/SideMenu';
 import Analytics from './pages/Analytics';
+import Employees from './pages/Employees';           // <-- NEW
 import AppTheme from './theme/AppTheme';
+
 import {
   chartsCustomizations,
   dataGridCustomizations,
   datePickersCustomizations,
   treeViewCustomizations,
 } from './theme/customizations';
-import React from 'react';
+
+type DashboardProps = {
+  disableCustomTheme?: boolean;
+};
 
 const xThemeComponents = {
   ...chartsCustomizations,
@@ -27,45 +34,55 @@ const xThemeComponents = {
   ...treeViewCustomizations,
 };
 
-const Dashboard: React.FC = (props) => {
-  // Read initial selectedIndex from localStorage, fallback to 0
+const Dashboard: React.FC<DashboardProps> = (props) => {
+ 
   const getInitialIndex = () => {
     const stored = localStorage.getItem('selectedMenuIndex');
-    return stored !== null ? parseInt(stored, 10) : 0;
+    const idx = stored !== null ? parseInt(stored, 10) : 0;
+    return Number.isNaN(idx) ? 0 : idx;
   };
-  const [selectedIndex, setSelectedIndex] = React.useState(getInitialIndex);
 
-  // Save selectedIndex to localStorage whenever it changes
+  const [selectedIndex, setSelectedIndex] = React.useState<number>(getInitialIndex);
+
   React.useEffect(() => {
     localStorage.setItem('selectedMenuIndex', selectedIndex.toString());
   }, [selectedIndex]);
 
-  let mainContent = null;
-  if (selectedIndex === 1) {
-    mainContent = <Analytics />;
-  } else {
-    mainContent = (
-      <Stack
-        spacing={2}
-        sx={{
-          alignItems: 'center',
-          mx: 3,
-          pb: 5,
-          mt: { xs: 8, md: 0 },
-        }}
-      >
-        <Header />
-        <MainGrid />
-      </Stack>
-    );
+  let mainContent: React.ReactNode;
+  switch (selectedIndex) {
+    case 1:
+      mainContent = <Analytics />;
+      break;
+    case 2:
+      mainContent = <Employees />;   
+      break;
+    default:
+      mainContent = (
+        <Stack
+          spacing={2}
+          sx={{
+            alignItems: 'center',
+            mx: 3,
+            pb: 5,
+            mt: { xs: 8, md: 0 },
+          }}
+        >
+          <Header />
+          <MainGrid />
+        </Stack>
+      );
   }
 
   return (
     <AppTheme {...props} themeComponents={xThemeComponents}>
       <CssBaseline enableColorScheme />
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+        {/* Side menu controls the selected page */}
         <SideMenu selectedIndex={selectedIndex} onMenuSelect={setSelectedIndex} />
+
+        {/* Optional top navbar */}
         <AppNavbar />
+
         {/* Main content */}
         <Box
           component="main"
