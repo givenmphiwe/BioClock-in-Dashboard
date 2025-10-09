@@ -24,7 +24,12 @@ const Drawer = styled(MuiDrawer)({
   },
 });
 
-export default function SideMenu() {
+interface SideMenuProps {
+  selectedIndex?: number;
+  onMenuSelect: (index: number) => void;
+}
+
+export default function SideMenu({ selectedIndex = 0, onMenuSelect }: SideMenuProps) {
   return (
     <Drawer
       variant="permanent"
@@ -53,7 +58,7 @@ export default function SideMenu() {
           flexDirection: 'column',
         }}
       >
-        <MenuContent />
+        <MenuContent selectedIndex={selectedIndex} onMenuSelect={onMenuSelect} />
         <CardAlert />
       </Box>
       <Stack

@@ -26,13 +26,21 @@ const secondaryListItems = [
   { text: 'Feedback', icon: <HelpRoundedIcon /> },
 ];
 
-export default function MenuContent() {
+interface MenuContentProps {
+  selectedIndex?: number;
+  onMenuSelect?: (index: number) => void;
+}
+
+export default function MenuContent({ selectedIndex = 0, onMenuSelect }: MenuContentProps) {
   return (
     <Stack sx={{ flexGrow: 1, p: 1, justifyContent: 'space-between' }}>
       <List dense>
         {mainListItems.map((item, index) => (
           <ListItem key={index} disablePadding sx={{ display: 'block' }}>
-            <ListItemButton selected={index === 0}>
+            <ListItemButton
+              selected={selectedIndex === index}
+              onClick={() => onMenuSelect && onMenuSelect(index)}
+            >
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />
             </ListItemButton>
