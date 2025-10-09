@@ -14,9 +14,16 @@ import CardAlert from './CardAlert';
 interface SideMenuMobileProps {
   open: boolean | undefined;
   toggleDrawer: (newOpen: boolean) => () => void;
+  selectedIndex?: number;
+  onMenuSelect?: (index: number) => void;
 }
 
-export default function SideMenuMobile({ open, toggleDrawer }: SideMenuMobileProps) {
+export default function SideMenuMobile({ open, toggleDrawer, selectedIndex = 0, onMenuSelect }: SideMenuMobileProps) {
+  // Wrap onMenuSelect to close drawer after selection
+  const handleMenuSelect = (index: number) => {
+    if (onMenuSelect) onMenuSelect(index);
+    toggleDrawer(false)();
+  };
   return (
     <Drawer
       anchor="right"
@@ -57,7 +64,7 @@ export default function SideMenuMobile({ open, toggleDrawer }: SideMenuMobilePro
         </Stack>
         <Divider />
         <Stack sx={{ flexGrow: 1 }}>
-          <MenuContent />
+          <MenuContent selectedIndex={selectedIndex} onMenuSelect={handleMenuSelect} />
           <Divider />
         </Stack>
         <CardAlert />

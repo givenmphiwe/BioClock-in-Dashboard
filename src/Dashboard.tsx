@@ -78,10 +78,11 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       <CssBaseline enableColorScheme />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
         {/* Side menu controls the selected page */}
-        <SideMenu selectedIndex={selectedIndex} onMenuSelect={setSelectedIndex} />
 
-        {/* Optional top navbar */}
-        <AppNavbar />
+  <SideMenu selectedIndex={selectedIndex} onMenuSelect={setSelectedIndex} />
+
+  {/* Optional top navbar */}
+  <AppNavbar selectedIndex={selectedIndex} onMenuSelect={setSelectedIndex} />
 
         {/* Main content */}
         <Box
