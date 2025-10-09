@@ -8,7 +8,11 @@ import ColorModeIconDropdown from '.././theme/ColorModeIconDropdown';
 
 import Search from './Search';
 
-export default function Header() {
+interface HeaderProps {
+  currentPage?: string;
+}
+
+export default function Header({ currentPage }: HeaderProps) {
   return (
     <Stack
       direction="row"
@@ -22,7 +26,7 @@ export default function Header() {
       }}
       spacing={2}
     >
-      <NavbarBreadcrumbs />
+      <NavbarBreadcrumbs current={currentPage} />
       <Stack direction="row" sx={{ gap: 1 }}>
         <Search />
         <CustomDatePicker />
