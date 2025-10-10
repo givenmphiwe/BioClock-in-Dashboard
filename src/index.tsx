@@ -1,10 +1,13 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom/client";
 import { StyledEngineProvider } from "@mui/material/styles";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthProvider";
 import Login from "./pages/Login";
 import App from "./Dashboard";
+import RequireAuth from "./auth/RequireAuth";
+import PublicOnly from "./auth/PublicOnly";
+import DecideLanding from "./auth/DecideLanding";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -12,20 +15,21 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Default route -> Login */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            {/* Default: choose based on session validity */}
+            <Route path="/" element={<DecideLanding />} />
 
-            {/* Public */}
-            <Route path="/login" element={<Login />} />
-
-            {/* Private */}
-            <Route >
-              <Route path="/Home" element={<App />} />
+            {/* Public routes that should be hidden if already authenticated */}
+            <Route element={<PublicOnly />}>
+              <Route path="/login" element={<Login />} />
             </Route>
 
+            {/* Private routes */}
+            <Route element={<RequireAuth />}>
+              <Route path="/home" element={<App />} />
+            </Route>
 
             {/* Fallback */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<DecideLanding />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

@@ -1,11 +1,18 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { AuthApi } from "../api/authClient";
 
-type User = { email: string } | null;
+type User = {
+  userId: string;
+  userName: string;
+  displayName: string;
+  email: string;
+  clientId: string;
+} | null;1
 
 type AuthContextType = {
   user: User;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string, remember: boolean) => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -14,19 +21,22 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [user, setUser] = useState<User>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("auth:user");
-    if (saved) setUser(JSON.parse(saved));
+    setUser(AuthApi.getUser());
   }, []);
 
-  const login = async (email: string, _password: string) => {
-    // TODO: replace with real API call
-    const u = { email };
-    localStorage.setItem("auth:user", JSON.stringify(u));
-    setUser(u);
+  const login = async (email: string, password: string, remember: boolean) => {
+    const res = await AuthApi.login(email, password, remember);
+    setUser({
+      userId: res.userId,
+      userName: res.userName,
+      displayName: res.displayName,
+      email: res.email,
+      clientId: res.clientId,
+    });
   };
 
-  const logout = () => {
-    localStorage.removeItem("auth:user");
+  const logout = async () => {
+    await AuthApi.logout();
     setUser(null);
   };
 

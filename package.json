@@ -19,6 +19,7 @@
     "@mui/x-date-pickers-pro": "latest",
     "@mui/x-tree-view": "latest",
     "@react-spring/web": "latest",
+    "axios": "^1.12.2",
     "clsx": "latest",
     "dayjs": "latest",
     "react": "latest",
