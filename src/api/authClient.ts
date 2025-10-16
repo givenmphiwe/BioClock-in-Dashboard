@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import type { LoginResponse } from "../types/auth";
 
 const api = axios.create({
-  baseURL: "https://localhost:7294/", // e.g. https://api.yourdomain.com
+  baseURL: "http://localhost:5099/",
 });
 
 type StorageLike = Pick<Storage, "getItem"|"setItem"|"removeItem">;
