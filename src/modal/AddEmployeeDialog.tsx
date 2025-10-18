@@ -90,7 +90,7 @@ export const AddEmployeeDialog = memo(function AddEmployeeDialog({
     const dd = Number(digits.slice(4, 6));
 
     if (mm < 1 || mm > 12) return null;
-    if (dd < 1 || dd > 31) return null; 
+    if (dd < 1 || dd > 31) return null;
 
     const now = new Date();
     const currentYY = now.getFullYear() % 100;
@@ -129,7 +129,7 @@ export const AddEmployeeDialog = memo(function AddEmployeeDialog({
       const dob = parseDobFromSouthAfricaId(value);
       if (dob) {
         next.dateOfBirth = dob;
-        next.age = calcAgeFromDob(dob); 
+        next.age = calcAgeFromDob(dob);
       }
       return next;
     });
