@@ -1,57 +1,235 @@
-import Layout from '../components/Layout';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import Paper from '@mui/material/Paper';
+import React, { memo, useCallback, useMemo, useRef, useState } from "react";
+import Layout from "../components/Layout";
+import Paper from "@mui/material/Paper";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import * as XLSX from "xlsx";
+import { Employee } from "../types/employee";
+import { AddEmployeeDialog } from "../modal/AddEmployeeDialog";
+import { bulkCreateEmployeesApi } from "../api/employees";
 
+
+// --- Columns (stable, outside component) ---
 const columns: GridColDef[] = [
-  { field: 'id', headerName: 'ID', width: 70 },
-  { field: 'firstName', headerName: 'First name', width: 130 },
-  { field: 'lastName', headerName: 'Last name', width: 130 },
+  { field: "id", headerName: "ID", width: 80 },
+  { field: "industryNumber", headerName: "IRN", width: 120 },
+  { field: "firstName", headerName: "First name", width: 160, editable: true },
+  { field: "lastName", headerName: "Last name", width: 160, editable: true },
+  { field: "occupationName", headerName: "Occupation", width: 160, editable: true },
+  { field: "gangUnitName", headerName: "Gang / Unit", width: 180, editable: true },
+  { field: "phone", headerName: "Phone", width: 150, editable: true },
+  { field: "email", headerName: "Email", width: 200, editable: true },
+  { field: "employmentType", headerName: "Type", width: 120, editable: true },
+  { field: "status", headerName: "Status", width: 120, editable: true },
+  { field: "isEnrolled", headerName: "Enrolled", width: 110, type: "boolean" },
+  { field: "age", headerName: "Age", type: "number", width: 100, editable: true },
+  { field: "dateOfBirth", headerName: "DOB", width: 130, editable: true },
+  { field: "hireDate", headerName: "Hire Date", width: 130, editable: true },
   {
-    field: 'age',
-    headerName: 'Age',
-    type: 'number',
-    width: 90,
-  },
-  {
-    field: 'fullName',
-    headerName: 'Full name',
-    description: 'This column has a value getter and is not sortable.',
+    field: "fullName",
+    headerName: "Full name",
     sortable: false,
-    width: 160,
-    valueGetter: (value, row) => `${row.firstName || ''} ${row.lastName || ''}`,
+    width: 200,
+    valueGetter: (value, row) => `${row.firstName || ""} ${row.lastName || ""}`,
   },
 ];
 
-const rows = [
-  { id: 1, lastName: 'Snow', firstName: 'Jon', age: 35 },
-  { id: 2, lastName: 'Lannister', firstName: 'Cersei', age: 42 },
-  { id: 3, lastName: 'Lannister', firstName: 'Jaime', age: 45 },
-  { id: 4, lastName: 'Stark', firstName: 'Arya', age: 16 },
-  { id: 5, lastName: 'Targaryen', firstName: 'Daenerys', age: null },
-  { id: 6, lastName: 'Melisandre', firstName: null, age: 150 },
-  { id: 7, lastName: 'Clifford', firstName: 'Ferrara', age: 44 },
-  { id: 8, lastName: 'Frances', firstName: 'Rossini', age: 36 },
-  { id: 9, lastName: 'Roxie', firstName: 'Harvey', age: 65 },
+const seedRows: Employee[] = [
+  {
+    id: 1,
+    industryNumber: "IRN001",
+    firstName: "Jon",
+    lastName: "Snow",
+    occupationName: "Developer",
+    gangUnitName: "Alpha",
+    phone: "+27 11 000 0000",
+    email: "jon@example.com",
+    employmentType: "permanent",
+    status: "active",
+    isEnrolled: true,
+    age: 35,
+    dateOfBirth: "1990-01-01",
+    hireDate: "2020-06-01",
+  },
 ];
 
-const paginationModel = { page: 0, pageSize: 5 };
-function Employees() {
+const EmployeesGrid = memo(function EmployeesGrid({
+  rows,
+  loading,
+  onEditCommit,
+}: {
+  rows: Employee[];
+  loading: boolean;
+  onEditCommit: (params: any) => void;
+}) {
+  const paginationModel = useMemo(() => ({ page: 0, pageSize: 10 }), []);
+
+  const processRowUpdate = useCallback((newRow: any) => newRow, []);
+
+  return (
+    <Paper sx={{ height: 600, width: "100%", position: "relative" }}>
+      {loading && (
+        <Stack
+          alignItems="center"
+          justifyContent="center"
+          sx={{ position: "absolute", inset: 0, zIndex: 2, bgcolor: "rgba(255,255,255,0.6)" }}
+        >
+          <CircularProgress />
+        </Stack>
+      )}
+      <DataGrid
+        rows={rows as any}
+        columns={columns}
+        initialState={{ pagination: { paginationModel } }}
+        pageSizeOptions={[10, 25]}
+        checkboxSelection
+        disableRowSelectionOnClick
+        sx={{ border: 0 }}
+        processRowUpdate={processRowUpdate}
+        onCellEditStop={onEditCommit}
+      />
+    </Paper>
+  );
+});
+
+
+export default function Employees() {
+  const [rows, setRows] = useState<Employee[]>(seedRows);
+  const [loading, setLoading] = useState(false);
+  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  // Dialog open flag ONLY (dialog has its own local form state)
+  const [addOpen, setAddOpen] = useState(false);
+
+  // Excel input ref
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const handleImportClick = () => fileInputRef.current?.click();
+
+  const notify = useCallback((message: string, severity: "success" | "error" | "info") => {
+    setSnack({ open: true, message, severity });
+  }, []);
+
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
+
+      const mapped: Omit<Employee, "id">[] = json.map((r: any) => ({
+        industryNumber: r.industryNumber ?? r.IRN ?? r.industry_number ?? "",
+        firstName: r.firstName ?? r.FirstName ?? r.first_name ?? "",
+        lastName: r.lastName ?? r.LastName ?? r.last_name ?? "",
+        idNumber: r.idNumber ?? r.IDNumber ?? r.id_number ?? "",
+        email: r.email ?? r.Email ?? "",
+        phone: r.phone ?? r.Phone ?? r.cell ?? "",
+        occupationId: r.occupationId ?? r.occupation_id ?? "",
+        occupationName: r.occupationName ?? r.occupation ?? r.job ?? "",
+        gangUnitId: r.gangUnitId ?? r.gang_unit_id ?? r.gangId ?? "",
+        gangUnitName: r.gangUnitName ?? r.gang_unit ?? r.gang ?? "",
+        employmentType: (r.employmentType ?? r.type ?? "permanent").toString().toLowerCase(),
+        status: (r.status ?? "active").toString().toLowerCase(),
+        isEnrolled: ["1", 1, true, "true", "yes", "y"].includes(r.isEnrolled),
+        age:
+          r.age !== undefined && r.age !== ""
+            ? Number(r.age)
+            : r.Age !== undefined && r.Age !== ""
+            ? Number(r.Age)
+            : null,
+        dateOfBirth: r.dateOfBirth ?? r.dob ?? r.DateOfBirth ?? "",
+        hireDate: r.hireDate ?? r.HireDate ?? r.start_date ?? "",
+      }));
+
+      const clean = mapped.filter((m) => m.firstName || m.lastName || m.industryNumber);
+      if (!clean.length) throw new Error("No rows found in the spreadsheet.");
+
+      const created = await bulkCreateEmployeesApi(clean);
+      setRows((prev) => {
+        const toAppend = created.map((c, i) => ({ ...c, id: c.id ?? `imp_${Date.now()}_${i}` }));
+        return [...toAppend, ...prev];
+      });
+      notify(`Imported ${created.length} employees`, "success");
+    } catch (err: any) {
+      console.error(err);
+      notify(err?.message || "Import failed", "error");
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }, [notify]);
+
+  const openAddDialog = useCallback(() => setAddOpen(true), []);
+  const closeAddDialog = useCallback(() => setAddOpen(false), []);
+
+  const handleCreateEmployeeSaved = useCallback((created: Employee) => {
+    setRows((prev) => [created, ...prev]);
+  }, []);
+
+  // Keep handler stable so DataGrid doesn't think props changed
+  const handleCellEditCommit = useCallback((params: any) => {
+    setRows((prev) => prev.map((r) => (r.id === params.id ? { ...r, [params.field]: params.value } : r)));
+  }, []);
+
   return (
     <Layout currentPage="Employees">
       <div style={{ padding: 32 }}>
-        <h1>Employees</h1>
-     <Paper sx={{ height: '100%', width: '100%' }}>
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        initialState={{ pagination: { paginationModel } }}
-        pageSizeOptions={[5, 10]}
-        checkboxSelection
-        sx={{ border: 0 }}
-      />
-    </Paper>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <Typography variant="h4">Employees</Typography>
+          <Stack direction="row" spacing={1}>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              onChange={handleImportFile}
+            />
+            <Button variant="outlined" onClick={handleImportClick} disabled={loading}>
+              Import Excel
+            </Button>
+            <Button variant="contained" onClick={openAddDialog} disabled={loading}>
+              Add Row
+            </Button>
+          </Stack>
+        </Stack>
+
+        <EmployeesGrid rows={rows} loading={loading} onEditCommit={handleCellEditCommit} />
+
+        <AddEmployeeDialog
+          open={addOpen}
+          onClose={closeAddDialog}
+          onSaved={handleCreateEmployeeSaved}
+          setGlobalLoading={setLoading}
+          notify={notify}
+        />
+
+        <Snackbar
+          open={snack.open}
+          autoHideDuration={4000}
+          onClose={() => setSnack((s) => ({ ...s, open: false }))}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={() => setSnack((s) => ({ ...s, open: false }))}
+            severity={snack.severity}
+            variant="filled"
+            sx={{ width: "100%" }}
+          >
+            {snack.message}
+          </Alert>
+        </Snackbar>
       </div>
     </Layout>
   );
 }
-export default Employees;
