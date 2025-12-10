@@ -153,5 +153,5 @@ export const AuthApi = {
   isAuthenticated() {
     return !!getAccessToken();
   },
-  api, // re-export configured axios instance
+  api,
 };

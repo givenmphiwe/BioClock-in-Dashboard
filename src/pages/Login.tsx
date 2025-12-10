@@ -84,7 +84,7 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
   const [open, setOpen] = React.useState(false);
 
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginWithGoogle, loginWithFacebook } = useAuth();
 
   const validate = () => {
     let ok = true;
@@ -109,7 +109,6 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
 
     return ok;
   };
- 
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -118,6 +117,7 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
     setLoading(true);
     try {
       await login(email, password, remember);
+
       navigate("/home", { replace: true });
     } catch (err: any) {
       const msg =
@@ -246,7 +246,23 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
             <Button
               fullWidth
               variant="outlined"
-              onClick={() => alert("Sign in with Google")}
+              onClick={async () => {
+                try {
+                  setServerError(null);
+                  setLoading(true);
+                  await loginWithGoogle(remember);
+                  navigate("/home", { replace: true });
+                } catch (err: any) {
+                  const msg =
+                    err?.response?.data?.message ||
+                    err?.response?.data ||
+                    err?.message ||
+                    "Google sign-in failed";
+                  setServerError(msg);
+                } finally {
+                  setLoading(false);
+                }
+              }}
               startIcon={<GoogleIcon />}
             >
               Sign in with Google
@@ -254,7 +270,23 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
             <Button
               fullWidth
               variant="outlined"
-              onClick={() => alert("Sign in with Facebook")}
+              onClick={async () => {
+                try {
+                  setServerError(null);
+                  setLoading(true);
+                  await loginWithFacebook(remember);
+                  navigate("/home", { replace: true });
+                } catch (err: any) {
+                  const msg =
+                    err?.response?.data?.message ||
+                    err?.response?.data ||
+                    err?.message ||
+                    "Facebook sign-in failed";
+                  setServerError(msg);
+                } finally {
+                  setLoading(false);
+                }
+              }}
               startIcon={<FacebookIcon />}
             >
               Sign in with Facebook

@@ -1,11 +1,13 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { isSessionValid } from "./session";
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "./AuthProvider";
 
 export default function PublicOnly() {
-  const location = useLocation();
-  if (isSessionValid()) {
-    // Already signed in and not expired: go straight to Home
-    return <Navigate to="/home" replace state={{ from: location }} />;
+  const { user, loading } = useAuth();
+  if (loading) {
+    return null; 
+  }
+  if (user) {
+    return <Navigate to="/home" replace />;
   }
   return <Outlet />;
 }
