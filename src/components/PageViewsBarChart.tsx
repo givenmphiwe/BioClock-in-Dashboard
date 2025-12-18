@@ -18,7 +18,7 @@ export default function PageViewsBarChart() {
     <Card variant="outlined" sx={{ width: '100%' }}>
       <CardContent>
         <Typography component="h2" variant="subtitle2" gutterBottom>
-          Page views and downloads
+          Stastics Overview
         </Typography>
         <Stack sx={{ justifyContent: 'space-between' }}>
           <Stack
@@ -35,7 +35,7 @@ export default function PageViewsBarChart() {
             <Chip size="small" color="error" label="-8%" />
           </Stack>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Page views and downloads for the last 6 months
+            Stastics for the last 6 months
           </Typography>
         </Stack>
         <BarChart
