@@ -11,6 +11,7 @@ import React from 'react';
 import AppNavbar from './components/AppNavbar';
 import Header from './components/Header';
 import MainGrid from './components/MainGrid';
+import dayjs, { type Dayjs } from 'dayjs';
 import SideMenu from './components/SideMenu';
 import Analytics from './pages/Analytics';
 import Employees from './pages/Employees';           // <-- NEW
@@ -43,6 +44,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   };
 
   const [selectedIndex, setSelectedIndex] = React.useState<number>(getInitialIndex);
+  const [selectedDate, setSelectedDate] = React.useState<Dayjs | null>(dayjs());
 
   React.useEffect(() => {
     localStorage.setItem('selectedMenuIndex', selectedIndex.toString());
@@ -67,8 +69,8 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             mt: { xs: 8, md: 0 },
           }}
         >
-          <Header />
-          <MainGrid />
+          <Header selectedDate={selectedDate} onDateChange={setSelectedDate} />
+          <MainGrid selectedDate={selectedDate} />
         </Stack>
       );
   }

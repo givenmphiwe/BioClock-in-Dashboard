@@ -57,15 +57,28 @@ function ButtonField(incomingProps: ButtonFieldOwnProps & Record<string, unknown
   );
 }
 
-export default function CustomDatePicker() {
-  const [value, setValue] = React.useState<Dayjs | null>(dayjs());
+export default function CustomDatePicker({
+  value: controlledValue,
+  onChange,
+}: {
+  value?: Dayjs | null;
+  onChange?: (newValue: Dayjs | null) => void;
+}) {
+  const [internalValue, setInternalValue] = React.useState<Dayjs | null>(dayjs());
+  const isControlled = controlledValue !== undefined;
+  const value = isControlled ? controlledValue ?? null : internalValue;
+
+  const handleChange = (newValue: Dayjs | null) => {
+    if (!isControlled) setInternalValue(newValue);
+    onChange?.(newValue);
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <DatePicker
         value={value}
         label={value == null ? null : value.format('MMM DD, YYYY')}
-        onChange={(newValue) => setValue(newValue)}
+        onChange={(newValue) => handleChange(newValue)}
         slots={{ field: ButtonField as any }}
         slotProps={{
           nextIconButton: { size: 'small' },

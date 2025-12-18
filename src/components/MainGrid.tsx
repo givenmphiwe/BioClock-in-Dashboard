@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Copyright from '../internals/components/Copyright';
+import dayjs, { type Dayjs } from 'dayjs';
 import ChartUserByCountry from './ChartUserByCountry';
 import CustomizedTreeView from './CustomizedTreeView';
 import CustomizedDataGrid from './CustomizedDataGrid';
@@ -14,7 +15,7 @@ import StatCard, { StatCardProps } from './StatCard';
 
 const data: StatCardProps[] = [
   {
-    title: 'Users',
+    title: 'Total Employees',
     value: '14k',
     interval: 'Last 30 days',
     trend: 'up',
@@ -24,7 +25,7 @@ const data: StatCardProps[] = [
     ],
   },
   {
-    title: 'Conversions',
+    title: 'Employees Clocked In',
     value: '325',
     interval: 'Last 30 days',
     trend: 'down',
@@ -34,7 +35,7 @@ const data: StatCardProps[] = [
     ],
   },
   {
-    title: 'Event count',
+    title: 'Employee Absenteeism',
     value: '200k',
     interval: 'Last 30 days',
     trend: 'neutral',
@@ -45,7 +46,25 @@ const data: StatCardProps[] = [
   },
 ];
 
-export default function MainGrid() {
+export default function MainGrid({ selectedDate }: { selectedDate?: Dayjs | null }) {
+
+  function getIntervalLabel(selectedDate?: Dayjs | null) {
+  const today = dayjs().startOf('day');
+
+  if (!selectedDate) return "Last 30 days";
+
+  const diff = today.diff(selectedDate.startOf('day'), "day");
+
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff <= 3) return `Last ${diff} days`;
+  if (diff <= 7) return `Last ${diff} days`;
+  if (diff <= 20) return `Last ${diff} days`;
+  if (diff <= 30) return `Last ${diff} days`;
+
+  return selectedDate.format('dddd, MMM D, YYYY');
+}
+
   return (
     <Box sx={{ width: '100%', maxWidth: { sm: '100%', md: '1700px' } }}>
       {/* cards */}
@@ -58,11 +77,15 @@ export default function MainGrid() {
         columns={12}
         sx={{ mb: (theme) => theme.spacing(2) }}
       >
-        {data.map((card, index) => (
-          <Grid key={index} size={{ xs: 12, sm: 6, lg: 3 }}>
-            <StatCard {...card} />
-          </Grid>
-        ))}
+        {data.map((card, index) => {
+          const intervalText = getIntervalLabel(selectedDate);
+          
+          return (
+            <Grid key={index} size={{ xs: 12, sm: 6, lg: 3 }}>
+              <StatCard {...card} interval={intervalText} />
+            </Grid>
+          );
+        })}
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <HighlightedCard />
         </Grid>
