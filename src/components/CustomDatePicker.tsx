@@ -84,8 +84,8 @@ export default function CustomDatePicker({
           nextIconButton: { size: 'small' },
           previousIconButton: { size: 'small' },
         }}
-        views={['day', 'month', 'year']}
-      />
+        views={['day']}
+      />     {/**month, year removed it for day only */}
     </LocalizationProvider>
   );
 }
