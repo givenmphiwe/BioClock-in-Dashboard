@@ -6,7 +6,6 @@ import Typography from '@mui/material/Typography';
 import Copyright from '../internals/components/Copyright';
 import dayjs, { type Dayjs } from 'dayjs';
 import ChartUserByCountry from './ChartUserByCountry';
-import CustomizedTreeView from './CustomizedTreeView';
 import CustomizedDataGrid from './CustomizedDataGrid';
 import HighlightedCard from './HighlightedCard';
 import PageViewsBarChart from './PageViewsBarChart';
@@ -105,7 +104,7 @@ export default function MainGrid({ selectedDate }: { selectedDate?: Dayjs | null
         </Grid>
         <Grid size={{ xs: 12, lg: 3 }}>
           <Stack gap={2} direction={{ xs: 'column', sm: 'row', lg: 'column' }}>
-            <CustomizedTreeView />
+            {/* <CustomizedTreeView /> */}
             <ChartUserByCountry />
           </Stack>
         </Grid>
