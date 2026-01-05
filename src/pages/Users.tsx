@@ -16,7 +16,6 @@ import { AddUserDialog } from "../modal/AddUserDialog";
 type PresenceMap = Record<string, Presence>;
 
 const columns: GridColDef[] = [
-  { field: "uid", headerName: "UID", width: 220 },
   { field: "name", headerName: "Name", width: 200 },
   { field: "industryNumber", headerName: "IRN", width: 140 },
   { field: "role", headerName: "Role", width: 140 },
@@ -87,22 +86,25 @@ export default function Users() {
 
   useEffect(() => {
     const usersRef = ref(db, "users");
+
+    return onValue(usersRef, (snap) => {
+      const data = snap.val() || {};
+      setUsers(
+        Object.keys(data).map((uid) => ({
+          uid,
+          ...data[uid],
+        }))
+      );
+    });
+  }, []);
+
+  useEffect(() => {
     const presenceRef = ref(db, "presence");
 
-    onValue(usersRef, (snap) => {
-      const data = snap.val() || {};
-      const list = Object.keys(data).map((uid) => ({
-        uid,
-        ...data[uid],
-        online: presence[uid]?.online ?? false,
-      }));
-      setUsers(list);
-    });
-
-    onValue(presenceRef, (snap) => {
+    return onValue(presenceRef, (snap) => {
       setPresence(snap.val() || {});
     });
-  }, [presence]);
+  }, []);
 
   const rows = useMemo(
     () =>
