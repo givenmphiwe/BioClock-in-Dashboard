@@ -14,6 +14,7 @@ import MainGrid from './components/MainGrid';
 import dayjs, { type Dayjs } from 'dayjs';
 import SideMenu from './components/SideMenu';
 import Analytics from './pages/Analytics';
+import Users from './pages/Users';
 import Employees from './pages/Employees';           // <-- NEW
 import AppTheme from './theme/AppTheme';
 
@@ -57,6 +58,9 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       break;
     case 2:
       mainContent = <Employees />;   
+      break;
+    case 3:
+      mainContent = <Users />;
       break;
     default:
       mainContent = (
