@@ -8,6 +8,7 @@ import Alert from "@mui/material/Alert";
 import { ref, onValue, update } from "firebase/database";
 import { db } from "../api/firebase";
 import { UsersGrid } from "../components/users/UsersGrid";
+import { AddUserDialog } from "../modal/AddUserDialog";
 import { PermissionsDialog } from "../components/users/PermissionsDialog";
 import { RemoveUserDialog } from "../components/users/RemoveUserDialog";
 import { UserPermissions } from "../types/types";
@@ -17,6 +18,7 @@ type PresenceMap = Record<string, { online: boolean }>;
 
 export default function Users() {
   const [users, setUsers] = useState<any[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
   const [presence, setPresence] = useState<PresenceMap>({});
   const [loading, setLoading] = useState(false);
   const [permUser, setPermUser] = useState<any | null>(null);
@@ -91,7 +93,9 @@ export default function Users() {
           sx={{ mb: 2 }}
         >
           <Typography variant="h4">Users</Typography>
-          <Button variant="contained">Add User</Button>
+          <Button variant="contained" onClick={() => setAddOpen(true)}>
+            Add User
+          </Button>
         </Stack>
 
         <UsersGrid
@@ -112,6 +116,13 @@ export default function Users() {
           user={removeUser}
           onClose={() => setRemoveUser(null)}
           onConfirm={confirmRemoveUser}
+        />
+        
+        <AddUserDialog
+          open={addOpen}
+          onClose={() => setAddOpen(false)}
+          notify={notify}
+          setGlobalLoading={setLoading}
         />
 
         <Snackbar

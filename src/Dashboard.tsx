@@ -13,7 +13,7 @@ import Header from './components/Header';
 import MainGrid from './components/MainGrid';
 import dayjs, { type Dayjs } from 'dayjs';
 import SideMenu from './components/SideMenu';
-import Analytics from './pages/Analytics';
+import Analytics from './pages/LeaveRequest';
 import Users from './pages/Users';
 import Employees from './pages/Employees';           // <-- NEW
 import AppTheme from './theme/AppTheme';

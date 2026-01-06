@@ -12,6 +12,7 @@ import {
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, db } from "../api/firebase";
+import Autocomplete from "@mui/material/Autocomplete";
 
 export function AddUserDialog({
   open,
@@ -67,16 +68,41 @@ export function AddUserDialog({
       <DialogTitle>Add User</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField label="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-          <TextField label="Industry Number" value={industryNumber} onChange={(e) => setIndustryNumber(e.target.value)} />
-          <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <TextField label="Temporary Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <TextField
+            label="Full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <TextField
+            label="Industry Number"
+            value={industryNumber}
+            onChange={(e) => setIndustryNumber(e.target.value)}
+          />
+          <TextField
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            label="Temporary Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-          <TextField select label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
-            <MenuItem value="employee">Employee</MenuItem>
-            <MenuItem value="supervisor">Supervisor</MenuItem>
-            <MenuItem value="admin">Admin</MenuItem>
-          </TextField>
+          <Autocomplete
+            freeSolo
+            options={["employee", "supervisor", "admin"]}
+            value={role}
+            onChange={(_, newValue) => {
+              if (newValue) setRole(newValue);
+            }}
+            onInputChange={(_, newInputValue) => {
+              setRole(newInputValue);
+            }}
+            renderInput={(params) => <TextField {...params} label="Role" />}
+          />
         </Stack>
       </DialogContent>
       <DialogActions>
