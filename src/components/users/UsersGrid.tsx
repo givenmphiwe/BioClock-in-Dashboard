@@ -7,7 +7,6 @@ import { ActionsCell } from "./ActionsCell";
 export function UsersGrid({
   rows,
   loading,
-  onPermissions,
 }: {
   rows: any[];
   loading: boolean;
