@@ -26,7 +26,7 @@ import {
 
 // --- Columns (stable, outside component) ---
 const columns: GridColDef[] = [
-  { field: "id", headerName: "ID", width: 80 },
+ 
   { field: "industryNumber", headerName: "IRN", width: 120 },
   { field: "firstName", headerName: "First name", width: 160, editable: true },
   { field: "lastName", headerName: "Last name", width: 160, editable: true },
@@ -145,7 +145,7 @@ const EmployeesGrid = memo(function EmployeesGrid({
 });
 
 export default function Employees() {
-  const [rows, setRows] = useState<Employee[]>(seedRows);
+  const [rows, setRows] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [snack, setSnack] = useState<{
     open: boolean;
@@ -307,7 +307,7 @@ export default function Employees() {
               onClick={handleImportClick}
               disabled={loading}
             >
-              Import Excel
+              Import CSV
             </Button>
             <Button
               variant="outlined"
@@ -322,7 +322,7 @@ export default function Employees() {
               onClick={openAddDialog}
               disabled={loading}
             >
-              Add Row
+              ADD Employee
             </Button>
           </Stack>
         </Stack>

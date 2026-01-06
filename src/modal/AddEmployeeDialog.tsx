@@ -12,7 +12,7 @@ import { Employee } from "../types/employee";
 import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
-import { createEmployeeApi } from "../api/employees";
+import { createEmployee } from "../api/employees.firebase";;
 
 type NewEmp = Omit<Employee, "id">;
 
@@ -68,7 +68,7 @@ export const AddEmployeeDialog = memo(function AddEmployeeDialog({
     }
     setGlobalLoading(true);
     try {
-      const created = await createEmployeeApi(newEmp);
+      const created = await createEmployee(newEmp);
       onSaved({ ...created, id: created.id ?? `new_${Date.now()}` });
       notify("Employee added", "success");
       setNewEmp(defaultNewEmp);

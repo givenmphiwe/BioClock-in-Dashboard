@@ -1,82 +1,29 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout";
-import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, update } from "firebase/database";
 import { db } from "../api/firebase";
-import { Presence, UserProfile } from "../types/types";
-import { AddUserDialog } from "../modal/AddUserDialog";
+import { UsersGrid } from "../components/users/UsersGrid";
+import { PermissionsDialog } from "../components/users/PermissionsDialog";
+import { UserPermissions } from "../types/types";
 
-type PresenceMap = Record<string, Presence>;
-
-const columns: GridColDef[] = [
-  { field: "name", headerName: "Name", width: 200 },
-  { field: "industryNumber", headerName: "IRN", width: 140 },
-  { field: "role", headerName: "Role", width: 140 },
-  {
-    field: "online",
-    headerName: "Status",
-    width: 120,
-    valueGetter: (_, row) => (row.online ? "Online" : "Offline"),
-  },
-];
-
-const UsersGrid = memo(function UsersGrid({
-  rows,
-  loading,
-}: {
-  rows: any[];
-  loading: boolean;
-}) {
-  const paginationModel = useMemo(() => ({ page: 0, pageSize: 10 }), []);
-
-  return (
-    <Paper sx={{ height: 600, width: "100%", position: "relative" }}>
-      {loading && (
-        <Stack
-          alignItems="center"
-          justifyContent="center"
-          sx={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 2,
-            bgcolor: "rgba(255,255,255,0.6)",
-          }}
-        >
-          <CircularProgress />
-        </Stack>
-      )}
-
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        getRowId={(r) => r.uid}
-        initialState={{ pagination: { paginationModel } }}
-        pageSizeOptions={[10, 25]}
-        disableRowSelectionOnClick
-        sx={{ border: 0 }}
-      />
-    </Paper>
-  );
-});
+type PresenceMap = Record<string, { online: boolean }>;
 
 export default function Users() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [presence, setPresence] = useState<PresenceMap>({});
   const [loading, setLoading] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
+  const [permUser, setPermUser] = useState<any | null>(null);
 
-  const [snack, setSnack] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error" | "info";
-  }>({ open: false, message: "", severity: "success" });
+  const [snack, setSnack] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error" | "info",
+  });
 
   const notify = useCallback(
     (message: string, severity: "success" | "error" | "info") =>
@@ -85,9 +32,7 @@ export default function Users() {
   );
 
   useEffect(() => {
-    const usersRef = ref(db, "users");
-
-    return onValue(usersRef, (snap) => {
+    return onValue(ref(db, "users"), (snap) => {
       const data = snap.val() || {};
       setUsers(
         Object.keys(data).map((uid) => ({
@@ -99,9 +44,7 @@ export default function Users() {
   }, []);
 
   useEffect(() => {
-    const presenceRef = ref(db, "presence");
-
-    return onValue(presenceRef, (snap) => {
+    return onValue(ref(db, "presence"), (snap) => {
       setPresence(snap.val() || {});
     });
   }, []);
@@ -115,6 +58,17 @@ export default function Users() {
     [users, presence]
   );
 
+  const savePermissions = async (permissions: UserPermissions) => {
+    if (!permUser) return;
+
+    await update(ref(db, `users/${permUser.uid}`), {
+      permissions,
+    });
+
+    notify("Permissions updated", "success");
+    setPermUser(null);
+  };
+
   return (
     <Layout currentPage="Users">
       <div style={{ padding: 32 }}>
@@ -125,30 +79,35 @@ export default function Users() {
           sx={{ mb: 2 }}
         >
           <Typography variant="h4">Users</Typography>
-          <Button variant="contained" onClick={() => setAddOpen(true)}>
-            Add User
-          </Button>
+          <Button variant="contained">Add User</Button>
         </Stack>
 
-        <UsersGrid rows={rows} loading={loading} />
+        <UsersGrid
+          rows={rows}
+          loading={loading}
+          onPermissions={(u) => setPermUser(u)}
+        />
 
-        <AddUserDialog
-          open={addOpen}
-          onClose={() => setAddOpen(false)}
-          notify={notify}
-          setGlobalLoading={setLoading}
+        <PermissionsDialog
+          open={!!permUser}
+          user={permUser}
+          onClose={() => setPermUser(null)}
+          onSave={savePermissions}
         />
 
         <Snackbar
           open={snack.open}
           autoHideDuration={4000}
-          onClose={() => setSnack((s) => ({ ...s, open: false }))}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+          onClose={() =>
+            setSnack((s) => ({ ...s, open: false }))
+          }
         >
           <Alert
             severity={snack.severity}
             variant="filled"
-            onClose={() => setSnack((s) => ({ ...s, open: false }))}
+            onClose={() =>
+              setSnack((s) => ({ ...s, open: false }))
+            }
           >
             {snack.message}
           </Alert>

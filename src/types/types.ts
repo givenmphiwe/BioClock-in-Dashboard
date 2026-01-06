@@ -10,3 +10,9 @@ export interface Presence {
   online: boolean;
   lastSeen: number;
 }
+
+export type UserPermissions = {
+  requestLeave: boolean;
+  clockInOut: boolean;
+  enrollmentFinger: boolean;
+};
