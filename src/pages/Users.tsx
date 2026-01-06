@@ -9,7 +9,9 @@ import { ref, onValue, update } from "firebase/database";
 import { db } from "../api/firebase";
 import { UsersGrid } from "../components/users/UsersGrid";
 import { PermissionsDialog } from "../components/users/PermissionsDialog";
+import { RemoveUserDialog } from "../components/users/RemoveUserDialog";
 import { UserPermissions } from "../types/types";
+import { remove } from "firebase/database";
 
 type PresenceMap = Record<string, { online: boolean }>;
 
@@ -18,6 +20,7 @@ export default function Users() {
   const [presence, setPresence] = useState<PresenceMap>({});
   const [loading, setLoading] = useState(false);
   const [permUser, setPermUser] = useState<any | null>(null);
+  const [removeUser, setRemoveUser] = useState<any | null>(null);
 
   const [snack, setSnack] = useState({
     open: false,
@@ -54,6 +57,8 @@ export default function Users() {
       users.map((u) => ({
         ...u,
         online: presence[u.uid]?.online ?? false,
+        onPermissions: (user: any) => setPermUser(user),
+        onRemove: (user: any) => setRemoveUser(user),
       })),
     [users, presence]
   );
@@ -67,6 +72,13 @@ export default function Users() {
 
     notify("Permissions updated", "success");
     setPermUser(null);
+  };
+
+  const confirmRemoveUser = async (user: any) => {
+    await remove(ref(db, `users/${user.uid}`));
+
+    notify("User removed", "success");
+    setRemoveUser(null);
   };
 
   return (
@@ -95,19 +107,22 @@ export default function Users() {
           onSave={savePermissions}
         />
 
+        <RemoveUserDialog
+          open={!!removeUser}
+          user={removeUser}
+          onClose={() => setRemoveUser(null)}
+          onConfirm={confirmRemoveUser}
+        />
+
         <Snackbar
           open={snack.open}
           autoHideDuration={4000}
-          onClose={() =>
-            setSnack((s) => ({ ...s, open: false }))
-          }
+          onClose={() => setSnack((s) => ({ ...s, open: false }))}
         >
           <Alert
             severity={snack.severity}
             variant="filled"
-            onClose={() =>
-              setSnack((s) => ({ ...s, open: false }))
-            }
+            onClose={() => setSnack((s) => ({ ...s, open: false }))}
           >
             {snack.message}
           </Alert>

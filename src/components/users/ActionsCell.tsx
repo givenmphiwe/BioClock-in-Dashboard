@@ -7,9 +7,11 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 export function ActionsCell({
   row,
   onPermissions,
+  onRemove,
 }: {
   row: any;
   onPermissions: (user: any) => void;
+  onRemove: (user: any) => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -32,9 +34,18 @@ export function ActionsCell({
         >
           Permissions
         </MenuItem>
+ <MenuItem
+  onClick={() => {
+    setAnchorEl(null);
+    onRemove(row);
+  }}
+  sx={{ color: "error.main" }}
+>
+  Remove User
+</MenuItem>
+        <MenuItem disabled>Other Action</MenuItem>
+      
 
-        {/* <MenuItem disabled>Other Action</MenuItem>
-        <MenuItem disabled>Remove User</MenuItem> */}
       </Menu>
     </>
   );

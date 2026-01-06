@@ -28,12 +28,13 @@ export function UsersGrid({
       headerName: "",
       width: 80,
       sortable: false,
-      renderCell: (params) => (
+       renderCell: (params) => (
         <ActionsCell
           row={params.row}
-          onPermissions={onPermissions}
+          onPermissions={params.row.onPermissions}
+          onRemove={params.row.onRemove}
         />
-      ),
+      )
     },
   ];
 
