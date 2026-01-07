@@ -1,53 +1,88 @@
-import { ref, push, set, update, get, child } from "firebase/database";
+import { ref, push, set, update, get } from "firebase/database";
 import { db } from "../api/firebase";
 import { Employee } from "../types/employee";
+import { auth } from "../api/firebase";
 
-/** Create single employee */
+/* ---------------------------------------------------
+   Helper: get companyId for current user
+--------------------------------------------------- */
+async function getCompanyId(): Promise<string> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("User not authenticated");
+
+  const snap = await get(ref(db, `userCompanies/${user.uid}`));
+  if (!snap.exists()) throw new Error("User is not linked to a company");
+
+  return snap.val().companyId;
+}
+
+/* ---------------------------------------------------
+   Create single employee
+--------------------------------------------------- */
 export async function createEmployee(employee: Omit<Employee, "id">) {
-  const newRef = push(ref(db, "employees"));
+  const companyId = await getCompanyId();
+
+  const newRef = push(ref(db, `companies/${companyId}/employees`));
   await set(newRef, employee);
+
   return { ...employee, id: newRef.key };
 }
 
-/** Bulk create (Excel import) */
+/* ---------------------------------------------------
+   Bulk create (Excel import)
+--------------------------------------------------- */
 export async function bulkCreateEmployeesFirebase(
   employees: Omit<Employee, "id">[]
 ) {
-  const updates: Record<string, any> = {};
-  const baseRef = ref(db, "employees");
+  const companyId = await getCompanyId();
+  const baseRef = ref(db, `companies/${companyId}/employees`);
 
-  employees.forEach((emp) => {
-    const key = push(baseRef).key!;
-    updates[`employees/${key}`] = emp;
-  });
+  const created: Employee[] = [];
 
-  await update(ref(db), updates);
+  for (const emp of employees) {
+    const newRef = push(baseRef);
+    await set(newRef, emp);
+    created.push({
+      ...(emp as Employee),
+      id: newRef.key!,
+    });
+  }
 
-  return Object.entries(updates).map(([path, value]) => ({
-    ...(value as Employee),
-    id: path.split("/")[1],
-  }));
+  return created;
 }
 
-/** Fetch all employees */
-export async function fetchEmployees() {
-  const snapshot = await get(child(ref(db), "employees"));
+/* ---------------------------------------------------
+   Fetch all employees
+--------------------------------------------------- */
+export async function fetchEmployees(): Promise<Employee[]> {
+  const companyId = await getCompanyId();
+
+  const snapshot = await get(
+    ref(db, `companies/${companyId}/employees`)
+  );
+
   if (!snapshot.exists()) return [];
 
   const data = snapshot.val();
+
   return Object.keys(data).map((id) => ({
     id,
     ...data[id],
   }));
 }
 
-/** Update single field */
+/* ---------------------------------------------------
+   Update single employee field
+--------------------------------------------------- */
 export async function updateEmployeeField(
   id: string,
   field: string,
   value: any
 ) {
-  await update(ref(db, `employees/${id}`), {
+  const companyId = await getCompanyId();
+
+  await update(ref(db, `companies/${companyId}/employees/${id}`), {
     [field]: value,
+    updatedAt: Date.now(),
   });
 }

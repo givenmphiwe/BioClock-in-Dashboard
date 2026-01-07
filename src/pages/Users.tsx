@@ -5,21 +5,22 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import { ref, onValue, update } from "firebase/database";
+import { ref, onValue, update, remove } from "firebase/database";
 import { db } from "../api/firebase";
+import { getCompanyId } from "../auth/authCompany";
 import { UsersGrid } from "../components/users/UsersGrid";
 import { AddUserDialog } from "../modal/AddUserDialog";
 import { PermissionsDialog } from "../components/users/PermissionsDialog";
 import { RemoveUserDialog } from "../components/users/RemoveUserDialog";
 import { UserPermissions } from "../types/types";
-import { remove } from "firebase/database";
 
 type PresenceMap = Record<string, { online: boolean }>;
 
 export default function Users() {
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [users, setUsers] = useState<any[]>([]);
-  const [addOpen, setAddOpen] = useState(false);
   const [presence, setPresence] = useState<PresenceMap>({});
+  const [addOpen, setAddOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [permUser, setPermUser] = useState<any | null>(null);
   const [removeUser, setRemoveUser] = useState<any | null>(null);
@@ -36,48 +37,89 @@ export default function Users() {
     []
   );
 
+  /* ----------------------------------
+     Resolve companyId once
+  ---------------------------------- */
   useEffect(() => {
-    return onValue(ref(db, "users"), (snap) => {
-      const data = snap.val() || {};
-      setUsers(
-        Object.keys(data).map((uid) => ({
-          uid,
-          ...data[uid],
-        }))
-      );
-    });
-  }, []);
+    getCompanyId()
+      .then(setCompanyId)
+      .catch((err) => {
+        console.error(err);
+        notify("User not linked to a company", "error");
+      });
+  }, [notify]);
 
+  /* ----------------------------------
+     Subscribe to company users
+  ---------------------------------- */
   useEffect(() => {
-    return onValue(ref(db, "presence"), (snap) => {
-      setPresence(snap.val() || {});
-    });
-  }, []);
+    if (!companyId) return;
+
+    return onValue(
+      ref(db, `companies/${companyId}/users`),
+      (snap) => {
+        const data = snap.val() || {};
+        setUsers(
+          Object.keys(data).map((uid) => ({
+            uid,
+            ...data[uid],
+          }))
+        );
+      }
+    );
+  }, [companyId]);
+
+  /* ----------------------------------
+     Subscribe to company presence
+  ---------------------------------- */
+  useEffect(() => {
+    if (!companyId) return;
+
+    return onValue(
+      ref(db, `companies/${companyId}/presence`),
+      (snap) => {
+        setPresence(snap.val() || {});
+      }
+    );
+  }, [companyId]);
 
   const rows = useMemo(
     () =>
       users.map((u) => ({
         ...u,
         online: presence[u.uid]?.online ?? false,
-        onPermissions: (user: any) => setPermUser(user),
-        onRemove: (user: any) => setRemoveUser(user),
+        onPermissions: () => setPermUser(u),
+        onRemove: () => setRemoveUser(u),
       })),
     [users, presence]
   );
 
+  /* ----------------------------------
+     Save permissions
+  ---------------------------------- */
   const savePermissions = async (permissions: UserPermissions) => {
-    if (!permUser) return;
+    if (!permUser || !companyId) return;
 
-    await update(ref(db, `users/${permUser.uid}`), {
-      permissions,
-    });
+    await update(
+      ref(db, `companies/${companyId}/users/${permUser.uid}`),
+      { permissions }
+    );
 
     notify("Permissions updated", "success");
     setPermUser(null);
   };
 
+  /* ----------------------------------
+     Remove user
+  ---------------------------------- */
   const confirmRemoveUser = async (user: any) => {
-    await remove(ref(db, `users/${user.uid}`));
+    if (!companyId) return;
+
+    await remove(
+      ref(db, `companies/${companyId}/users/${user.uid}`)
+    );
+
+    await remove(ref(db, `userCompanies/${user.uid}`));
 
     notify("User removed", "success");
     setRemoveUser(null);
@@ -93,16 +135,18 @@ export default function Users() {
           sx={{ mb: 2 }}
         >
           <Typography variant="h4">Users</Typography>
-          <Button variant="contained" onClick={() => setAddOpen(true)}>
+          <Button
+            variant="contained"
+            onClick={() => setAddOpen(true)}
+            disabled={!companyId}
+          >
             Add User
           </Button>
         </Stack>
 
-        <UsersGrid
-          rows={rows}
-          loading={loading}
-          onPermissions={(u) => setPermUser(u)}
-        />
+        <UsersGrid rows={rows} loading={loading} onPermissions={function (user: any): void {
+          throw new Error("Function not implemented.");
+        } } />
 
         <PermissionsDialog
           open={!!permUser}
@@ -117,7 +161,7 @@ export default function Users() {
           onClose={() => setRemoveUser(null)}
           onConfirm={confirmRemoveUser}
         />
-        
+
         <AddUserDialog
           open={addOpen}
           onClose={() => setAddOpen(false)}
