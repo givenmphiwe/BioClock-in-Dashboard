@@ -262,9 +262,8 @@ export default function LeaveRequest() {
             </Typography>
             <TextField
               label="Reason (optional)"
+              type="text"
               fullWidth
-              multiline
-              minRows={3}
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
             />
