@@ -49,14 +49,20 @@ export default function MenuContent({ selectedIndex = 0, onMenuSelect }: MenuCon
         ))}
       </List>
       <List dense>
-        {secondaryListItems.map((item, index) => (
-          <ListItem key={index} disablePadding sx={{ display: 'block' }}>
-            <ListItemButton>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+        {secondaryListItems.map((item, index) => {
+          const idx = mainListItems.length + index; // offset after main items
+          return (
+            <ListItem key={index} disablePadding sx={{ display: 'block' }}>
+              <ListItemButton
+                selected={selectedIndex === idx}
+                onClick={() => onMenuSelect && onMenuSelect(idx)}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
       </List>
     </Stack>
   );

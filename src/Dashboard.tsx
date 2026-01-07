@@ -18,6 +18,16 @@ import Users from './pages/Users';
 import Employees from './pages/Employees';           // <-- NEW
 import AppTheme from './theme/AppTheme';
 import Attendance from './pages/Attendance';
+import Settings from './pages/Settings';
+
+type SettingsNavigateProp = {
+  onNavigate?: React.Dispatch<React.SetStateAction<number>>;
+};
+
+const SettingsWithNavigate: React.FC<SettingsNavigateProp> = (props) => {
+  // forward props to the real Settings component, cast to any to avoid prop type mismatch
+  return <Settings {...(props as any)} />;
+};
 
 import {
   chartsCustomizations,
@@ -58,13 +68,16 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       mainContent = <Analytics />;
       break;
     case 2:
-      mainContent = <Employees />;   
+      mainContent = <Employees/>;
       break;
     case 3:
       mainContent = <Users />;
       break;
     case 4:
       mainContent = <Attendance />;
+      break;
+    case 5:
+      mainContent = <SettingsWithNavigate onNavigate={setSelectedIndex}/>;
       break;
     default:
       mainContent = (
