@@ -17,6 +17,7 @@ import Analytics from './pages/LeaveRequest';
 import Users from './pages/Users';
 import Employees from './pages/Employees';           // <-- NEW
 import AppTheme from './theme/AppTheme';
+import Attendance from './pages/Attendance';
 
 import {
   chartsCustomizations,
@@ -61,6 +62,9 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       break;
     case 3:
       mainContent = <Users />;
+      break;
+    case 4:
+      mainContent = <Attendance />;
       break;
     default:
       mainContent = (

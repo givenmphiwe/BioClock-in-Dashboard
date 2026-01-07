@@ -11,19 +11,20 @@ import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
-import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
+import BrowseGalleryIcon from '@mui/icons-material/BrowseGallery';
 
 const mainListItems = [
   { text: 'Home', icon: <HomeRoundedIcon /> },
   { text: 'Leave Requests', icon: <AnalyticsRoundedIcon /> },
   { text: 'Employees', icon: <PeopleRoundedIcon /> },
   { text: 'Users', icon: <AssignmentRoundedIcon /> },
+  { text: 'Attendance', icon: <BrowseGalleryIcon /> },
 ];
 
 const secondaryListItems = [
   { text: 'Settings', icon: <SettingsRoundedIcon /> },
   { text: 'About', icon: <InfoRoundedIcon /> },
-  { text: 'Feedback', icon: <HelpRoundedIcon /> },
+  // { text: 'Feedback', icon: <HelpRoundedIcon /> },
 ];
 
 interface MenuContentProps {
