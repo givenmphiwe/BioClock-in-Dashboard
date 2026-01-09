@@ -40,6 +40,7 @@ export function AddUserDialog({
       await set(ref(db, `users/${uid}`), {
         name,
         industryNumber,
+        email,
         role,
         createdAt: Date.now(),
       });
