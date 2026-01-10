@@ -12,6 +12,7 @@ import { UsersGrid } from "../components/users/UsersGrid";
 import { AddUserDialog } from "../modal/AddUserDialog";
 import { PermissionsDialog } from "../components/users/PermissionsDialog";
 import { RemoveUserDialog } from "../components/users/RemoveUserDialog";
+import { AssignEmployeesDialog } from "../components/users/AssignEmployeesDialog";
 import { UserPermissions } from "../types/types";
 
 type PresenceMap = Record<string, { online: boolean }>;
@@ -24,6 +25,7 @@ export default function Users() {
   const [loading, setLoading] = useState(false);
   const [permUser, setPermUser] = useState<any | null>(null);
   const [removeUser, setRemoveUser] = useState<any | null>(null);
+  const [assignUser, setAssignUser] = useState<any | null>(null);
 
   const [snack, setSnack] = useState({
     open: false,
@@ -90,6 +92,7 @@ export default function Users() {
         online: presence[u.uid]?.online ?? false,
         onPermissions: () => setPermUser(u),
         onRemove: () => setRemoveUser(u),
+        onAssignEmployees: () => setAssignUser(u),
       })),
     [users, presence]
   );
@@ -144,15 +147,20 @@ export default function Users() {
           </Button>
         </Stack>
 
-        <UsersGrid rows={rows} loading={loading} onPermissions={function (user: any): void {
-          throw new Error("Function not implemented.");
-        } } />
+        <UsersGrid rows={rows} loading={loading} />
 
         <PermissionsDialog
           open={!!permUser}
           user={permUser}
           onClose={() => setPermUser(null)}
           onSave={savePermissions}
+        />
+
+         <AssignEmployeesDialog
+          open={!!assignUser}
+          user={assignUser}
+          onClose={() => setAssignUser(null)}
+          companyId={companyId}
         />
 
         <RemoveUserDialog

@@ -8,10 +8,12 @@ export function ActionsCell({
   row,
   onPermissions,
   onRemove,
+  onAssignEmployees,
 }: {
   row: any;
   onPermissions: (user: any) => void;
   onRemove: (user: any) => void;
+  onAssignEmployees: (user: any) => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -29,23 +31,28 @@ export function ActionsCell({
         <MenuItem
           onClick={() => {
             setAnchorEl(null);
+            onAssignEmployees(row);
+          }}
+        >
+          Assign Team Members
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
             onPermissions(row);
           }}
         >
           Permissions
         </MenuItem>
- <MenuItem
-  onClick={() => {
-    setAnchorEl(null);
-    onRemove(row);
-  }}
-  sx={{ color: "error.main" }}
->
-  Remove User
-</MenuItem>
-        <MenuItem disabled>Other Action</MenuItem>
-      
-
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
+            onRemove(row);
+          }}
+          sx={{ color: "error.main" }}
+        >
+          Remove User
+        </MenuItem>
       </Menu>
     </>
   );

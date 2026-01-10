@@ -11,6 +11,7 @@ export function UsersGrid({
   rows: any[];
   loading: boolean;
   onPermissions: (user: any) => void;
+  onAssignEmployees: (user: any) => void;
 }) {
   const columns: GridColDef[] = [
     { field: "name", headerName: "Name", width: 200 },
@@ -32,6 +33,7 @@ export function UsersGrid({
           row={params.row}
           onPermissions={params.row.onPermissions}
           onRemove={params.row.onRemove}
+          onAssignEmployees={params.row.onAssignEmployees}
         />
       )
     },
