@@ -12,6 +12,7 @@ import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import BrowseGalleryIcon from '@mui/icons-material/BrowseGallery';
+import MonetizationOnRoundedIcon from '@mui/icons-material/MonetizationOnRounded';
 
 const mainListItems = [
   { text: 'Home', icon: <HomeRoundedIcon /> },
@@ -19,6 +20,7 @@ const mainListItems = [
   { text: 'Employees', icon: <PeopleRoundedIcon /> },
   { text: 'Users', icon: <AssignmentRoundedIcon /> },
   { text: 'Leave Requests', icon: <AnalyticsRoundedIcon /> },
+  { text: 'Payroll', icon: <MonetizationOnRoundedIcon /> },
 ];
 
 const secondaryListItems = [

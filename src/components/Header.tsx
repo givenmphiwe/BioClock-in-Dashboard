@@ -1,4 +1,3 @@
-import * as React from 'react';
 import Stack from '@mui/material/Stack';
 import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -6,8 +5,6 @@ import CustomDatePicker from './CustomDatePicker';
 import NavbarBreadcrumbs from './NavbarBreadcrumbs';
 import MenuButton from './MenuButton';
 import ColorModeIconDropdown from '.././theme/ColorModeIconDropdown';
-
-import Search from './Search';
 
 interface HeaderProps {
   currentPage?: string;
@@ -31,7 +28,7 @@ export default function Header({ currentPage, selectedDate, onDateChange }: Head
     >
       <NavbarBreadcrumbs current={currentPage} />
       <Stack direction="row" sx={{ gap: 1 }}>
-        <Search />
+        {/* <Search /> */}
         <CustomDatePicker value={selectedDate ?? dayjs()} onChange={onDateChange} />
         <MenuButton showBadge aria-label="Open notifications">
           <NotificationsRoundedIcon />

@@ -19,6 +19,7 @@ import Employees from './pages/Employees';           // <-- NEW
 import AppTheme from './theme/AppTheme';
 import Attendance from './pages/Attendance';
 import Settings from './pages/Settings';
+import Payroll from './pages/Payroll';
 
 type SettingsNavigateProp = {
   onNavigate?: React.Dispatch<React.SetStateAction<number>>;
@@ -79,8 +80,14 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
      mainContent = <Analytics />;
       break;
     case 5:
+      mainContent = (
+       <Payroll selectedDate={selectedDate} onDateChange={setSelectedDate} />
+      );
+      break;
+    case 6:
       mainContent = <SettingsWithNavigate onNavigate={setSelectedIndex}/>;
       break;
+   
     default:
       mainContent = (
         <Stack
