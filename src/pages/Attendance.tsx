@@ -107,31 +107,33 @@ export default function Attendance({
 
           let status = "";
 
-          // Late / On time
-          if (clockInTime) {
-            const shiftStart = new Date(clockInTime);
-            shiftStart.setHours(sh, sm + grace, 0, 0);
+          if (rec.earlyLeave) {
+            earlyOut++;
+            status = "Early Leave";
+          } else {
+            if (clockInTime) {
+              const shiftStart = new Date(clockInTime);
+              shiftStart.setHours(sh, sm + grace, 0, 0);
 
-            if (clockInTime <= shiftStart) {
-              onTime++;
-              status = "On Time";
-            } else {
-              late++;
-              status = "Late";
+              if (clockInTime <= shiftStart) {
+                onTime++;
+                status = "On Time";
+              } else {
+                late++;
+                status = "Late";
+              }
+            }
+
+            if (clockOutTime) {
+              const shiftEnd = new Date(clockOutTime);
+              shiftEnd.setHours(eh, em, 0, 0);
+
+              if (clockOutTime < shiftEnd) {
+                earlyOut++;
+                status = "Early Out";
+              }
             }
           }
-
-          // Early out
-          if (clockOutTime) {
-            const shiftEnd = new Date(clockOutTime);
-            shiftEnd.setHours(eh, em, 0, 0);
-
-            if (clockOutTime < shiftEnd) {
-              earlyOut++;
-              status = "Early Out";
-            }
-          }
-
           grid.push({
             id: id++,
             employee: `${emp.firstName} ${emp.lastName}`,
