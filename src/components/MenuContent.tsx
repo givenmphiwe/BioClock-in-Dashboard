@@ -15,10 +15,10 @@ import BrowseGalleryIcon from '@mui/icons-material/BrowseGallery';
 
 const mainListItems = [
   { text: 'Home', icon: <HomeRoundedIcon /> },
-  { text: 'Leave Requests', icon: <AnalyticsRoundedIcon /> },
+  { text: 'Attendance', icon: <BrowseGalleryIcon /> },
   { text: 'Employees', icon: <PeopleRoundedIcon /> },
   { text: 'Users', icon: <AssignmentRoundedIcon /> },
-  { text: 'Attendance', icon: <BrowseGalleryIcon /> },
+  { text: 'Leave Requests', icon: <AnalyticsRoundedIcon /> },
 ];
 
 const secondaryListItems = [

@@ -65,7 +65,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   let mainContent: React.ReactNode;
   switch (selectedIndex) {
     case 1:
-      mainContent = <Analytics />;
+      mainContent = <Attendance />;
       break;
     case 2:
       mainContent = <Employees/>;
@@ -74,7 +74,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       mainContent = <Users />;
       break;
     case 4:
-      mainContent = <Attendance />;
+     mainContent = <Analytics />;
       break;
     case 5:
       mainContent = <SettingsWithNavigate onNavigate={setSelectedIndex}/>;
