@@ -32,8 +32,18 @@ export default function Attendance({
     severity: "success" as "success" | "error" | "info",
   });
 
+  const isFuture = selectedDate
+  ? selectedDate.isAfter(new Date(), "day")
+  : false;
+
   useEffect(() => {
     if (!companyId) return;
+
+  if (isFuture) {
+    setRows([]);
+    setStats([]);
+    return;
+  }
 
     const load = async () => {
       setLoading(true);
