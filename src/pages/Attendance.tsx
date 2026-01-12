@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { type Dayjs } from 'dayjs';
+import { type Dayjs } from "dayjs";
 import Layout from "../components/Layout";
 import { Box, Stack, Typography, Paper, Chip } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
@@ -12,13 +12,20 @@ type AttendanceProps = {
   onDateChange?: (d: Dayjs | null) => void;
 };
 
-export default function Attendance({ selectedDate, onDateChange }: AttendanceProps) {
+export default function Attendance({
+  selectedDate,
+  onDateChange,
+}: AttendanceProps) {
   const today = new Date().toISOString().split("T")[0];
-  const selectedDateStr = selectedDate ? selectedDate.format('YYYY-MM-DD') : today;
+  const selectedDateStr = selectedDate
+    ? selectedDate.format("YYYY-MM-DD")
+    : today;
 
   const [rows, setRows] = useState<any[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [stats, setStats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
   const [snack, setSnack] = useState({
     open: false,
     message: "",
@@ -29,123 +36,129 @@ export default function Attendance({ selectedDate, onDateChange }: AttendancePro
     if (!companyId) return;
 
     const load = async () => {
-      const empSnap = await get(ref(db, `companies/${companyId}/employees`));
-      const attSnap = await get(
-        ref(db, `companies/${companyId}/attendance/${selectedDateStr}`)
-      );
-      const rulesSnap = await get(
-        ref(db, `companies/${companyId}/info/settings`)
-      );
+      setLoading(true);
 
-      const employees = empSnap.val() || {};
-      const attendance = attSnap.val() || {};
-      const rulesVal = rulesSnap.val() || {};
+      try {
+        const empSnap = await get(ref(db, `companies/${companyId}/employees`));
+        const attSnap = await get(
+          ref(db, `companies/${companyId}/attendance/${selectedDateStr}`)
+        );
+        const rulesSnap = await get(
+          ref(db, `companies/${companyId}/info/settings`)
+        );
 
-      const startStr = rulesVal.workingHours?.start ?? "08:00";
-      const endStr = rulesVal.workingHours?.end ?? "17:00";
-      const grace = rulesVal.clockingRules?.graceMinutes ?? 0;
+        const employees = empSnap.val() || {};
+        const attendance = attSnap.val() || {};
+        const rulesVal = rulesSnap.val() || {};
 
-      const [sh, sm] = startStr.split(":").map(Number);
-      const [eh, em] = endStr.split(":").map(Number);
+        const startStr = rulesVal.workingHours?.start ?? "08:00";
+        const endStr = rulesVal.workingHours?.end ?? "17:00";
+        const grace = rulesVal.clockingRules?.graceMinutes ?? 0;
 
-      let onTime = 0;
-      let late = 0;
-      let earlyOut = 0;
-      let absent = 0;
-      let noIn = 0;
-      let noOut = 0;
+        const [sh, sm] = startStr.split(":").map(Number);
+        const [eh, em] = endStr.split(":").map(Number);
 
-      let grid: any[] = [];
-      let id = 1;
+        let onTime = 0;
+        let late = 0;
+        let earlyOut = 0;
+        let absent = 0;
+        let noIn = 0;
+        let noOut = 0;
 
-      Object.keys(employees).forEach((empId) => {
-        const emp = employees[empId];
-        const rec = attendance[empId];
+        let grid: any[] = [];
+        let id = 1;
 
-        // No record → Absent
-        if (!rec) {
-          absent++;
+        Object.keys(employees).forEach((empId) => {
+          const emp = employees[empId];
+          const rec = attendance[empId];
+
+          // No record → Absent
+          if (!rec) {
+            absent++;
+            grid.push({
+              id: id++,
+              employee: `${emp.firstName} ${emp.lastName}`,
+              employeeId: emp.industryNumber,
+              clockIn: "-",
+              clockOut: "-",
+              hours: "-",
+              overtime: "-",
+              location: "Site",
+              note: "Absent",
+            });
+            return;
+          }
+
+          if (!rec.clockIn) noIn++;
+          if (!rec.clockOut) noOut++;
+
+          const clockInTime = rec.clockIn ? new Date(rec.clockIn) : null;
+          const clockOutTime = rec.clockOut ? new Date(rec.clockOut) : null;
+
+          let status = "";
+
+          // Late / On time
+          if (clockInTime) {
+            const shiftStart = new Date(clockInTime);
+            shiftStart.setHours(sh, sm + grace, 0, 0);
+
+            if (clockInTime <= shiftStart) {
+              onTime++;
+              status = "On Time";
+            } else {
+              late++;
+              status = "Late";
+            }
+          }
+
+          // Early out
+          if (clockOutTime) {
+            const shiftEnd = new Date(clockOutTime);
+            shiftEnd.setHours(eh, em, 0, 0);
+
+            if (clockOutTime < shiftEnd) {
+              earlyOut++;
+              status = "Early Out";
+            }
+          }
+
           grid.push({
             id: id++,
             employee: `${emp.firstName} ${emp.lastName}`,
             employeeId: emp.industryNumber,
-            clockIn: "-",
-            clockOut: "-",
+            clockIn: clockInTime
+              ? clockInTime.toLocaleTimeString("en-ZA", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })
+              : "-",
+            clockOut: clockOutTime
+              ? clockOutTime.toLocaleTimeString("en-ZA", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })
+              : "-",
             hours: "-",
             overtime: "-",
             location: "Site",
-            note: "Absent",
+            note: status,
           });
-          return;
-        }
-
-        if (!rec.clockIn) noIn++;
-        if (!rec.clockOut) noOut++;
-
-        const clockInTime = rec.clockIn ? new Date(rec.clockIn) : null;
-        const clockOutTime = rec.clockOut ? new Date(rec.clockOut) : null;
-
-        let status = "";
-
-        // Late / On time
-        if (clockInTime) {
-          const shiftStart = new Date(clockInTime);
-          shiftStart.setHours(sh, sm + grace, 0, 0);
-
-          if (clockInTime <= shiftStart) {
-            onTime++;
-            status = "On Time";
-          } else {
-            late++;
-            status = "Late";
-          }
-        }
-
-        // Early out
-        if (clockOutTime) {
-          const shiftEnd = new Date(clockOutTime);
-          shiftEnd.setHours(eh, em, 0, 0);
-
-          if (clockOutTime < shiftEnd) {
-            earlyOut++;
-            status = "Early Out";
-          }
-        }
-
-        grid.push({
-          id: id++,
-          employee: `${emp.firstName} ${emp.lastName}`,
-          employeeId: emp.industryNumber,
-          clockIn: clockInTime
-            ? clockInTime.toLocaleTimeString("en-ZA", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              })
-            : "-",
-          clockOut: clockOutTime
-            ? clockOutTime.toLocaleTimeString("en-ZA", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              })
-            : "-",
-          hours: "-",
-          overtime: "-",
-          location: "Site",
-          note: status,
         });
-      });
 
-      setRows(grid);
-      setStats([
-        { label: "On Time", value: onTime, color: "success" },
-        { label: "Late Clock-in", value: late, color: "warning" },
-        { label: "Early Clock-out", value: earlyOut, color: "warning" },
-        { label: "Absent", value: absent, color: "error" },
-        { label: "No Clock-in", value: noIn, color: "error" },
-        { label: "No Clock-out", value: noOut, color: "default" },
-      ]);
+        setRows(grid);
+        setStats([
+          { label: "On Time", value: onTime, color: "success" },
+          { label: "Late Clock-in", value: late, color: "warning" },
+          { label: "Early Clock-out", value: earlyOut, color: "warning" },
+          { label: "Absent", value: absent, color: "error" },
+          { label: "No Clock-in", value: noIn, color: "error" },
+          { label: "No Clock-out", value: noOut, color: "default" },
+        ]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     load();
@@ -226,24 +239,39 @@ export default function Attendance({ selectedDate, onDateChange }: AttendancePro
   ];
 
   return (
-    <Layout currentPage="Attendance" selectedDate={selectedDate} onDateChange={onDateChange}>
+    <Layout
+      currentPage="Attendance"
+      selectedDate={selectedDate}
+      onDateChange={onDateChange}
+    >
       <Box p={3}>
         <Typography variant="h4" fontWeight={600}>
           Attendance
         </Typography>
 
         <Stack direction="row" spacing={2} my={3} flexWrap="wrap">
-          {stats.map((s) => (
-            <Paper key={s.label} sx={{ p: 2, minWidth: 160 }}>
-              <Typography variant="caption">{s.label}</Typography>
-              <Typography variant="h5">{s.value}</Typography>
-              <Chip label="Today" color={s.color as any} size="small" />
-            </Paper>
-          ))}
+          {loading ? (
+            <Typography color="text.secondary">
+              Loading attendance...
+            </Typography>
+          ) : (
+            stats.map((s) => (
+              <Paper key={s.label} sx={{ p: 2, minWidth: 160 }}>
+                <Typography variant="caption">{s.label}</Typography>
+                <Typography variant="h5">{s.value}</Typography>
+                <Chip label="Today" color={s.color as any} size="small" />
+              </Paper>
+            ))
+          )}
         </Stack>
 
         <Paper sx={{ height: 600 }}>
-          <DataGrid rows={rows} columns={columns} />
+          <DataGrid
+            rows={rows}
+            columns={columns}
+            loading={loading}
+            disableRowSelectionOnClick
+          />
         </Paper>
       </Box>
     </Layout>
