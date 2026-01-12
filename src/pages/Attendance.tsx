@@ -1,4 +1,4 @@
-import { useEffect, useState,useCallback} from "react";
+import { useEffect, useState, useCallback } from "react";
 import Layout from "../components/Layout";
 import { Box, Stack, Typography, Paper, Chip } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
@@ -7,13 +7,12 @@ import { getCompanyId } from "../auth/authCompany";
 import { db } from "../api/firebase";
 
 export default function Attendance() {
-
   const today = new Date().toISOString().split("T")[0];
 
   const [rows, setRows] = useState<any[]>([]);
-const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [stats, setStats] = useState<any[]>([]);
-   const [snack, setSnack] = useState({
+  const [snack, setSnack] = useState({
     open: false,
     message: "",
     severity: "success" as "success" | "error" | "info",
@@ -144,19 +143,19 @@ const [companyId, setCompanyId] = useState<string | null>(null);
 
     load();
   }, [companyId, today]);
-const notify = useCallback(
+  const notify = useCallback(
     (message: string, severity: "success" | "error" | "info") =>
       setSnack({ open: true, message, severity }),
     []
   );
   useEffect(() => {
-      getCompanyId()
-        .then(setCompanyId)
-        .catch((err) => {
-          console.error(err);
-          notify("User not linked to a company", "error");
-        });
-    }, [notify]);
+    getCompanyId()
+      .then(setCompanyId)
+      .catch((err) => {
+        console.error(err);
+        notify("User not linked to a company", "error");
+      });
+  }, [notify]);
 
   const columns: GridColDef[] = [
     {
@@ -194,30 +193,29 @@ const notify = useCallback(
     { field: "overtime", headerName: "Overtime", width: 120 },
     { field: "location", headerName: "Location", width: 150 },
     {
-  field: "note",
-  headerName: "Status",
-  flex: 1,
-  renderCell: (params) => {
-    const value = params.value;
+      field: "note",
+      headerName: "Status",
+      flex: 1,
+      renderCell: (params) => {
+        const value = params.value;
 
-    let color: any = "default";
+        let color: any = "default";
 
-    if (value === "Late") color = "warning";
-    if (value === "On Time") color = "success";
-    if (value === "Early Out") color = "warning";
-    if (value === "Absent") color = "error";
+        if (value === "Late") color = "warning";
+        if (value === "On Time") color = "success";
+        if (value === "Early Out") color = "warning";
+        if (value === "Absent") color = "error";
 
-    return (
-      <Chip
-        label={value || "-"}
-        color={color}
-        size="small"
-        sx={{ fontWeight: 600 }}
-      />
-    );
-  },
-},
-
+        return (
+          <Chip
+            label={value || "-"}
+            color={color}
+            size="small"
+            sx={{ fontWeight: 600 }}
+          />
+        );
+      },
+    },
   ];
 
   return (
@@ -240,7 +238,6 @@ const notify = useCallback(
         <Paper sx={{ height: 600 }}>
           <DataGrid rows={rows} columns={columns} />
         </Paper>
-        
       </Box>
     </Layout>
   );
