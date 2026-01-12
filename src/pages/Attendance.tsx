@@ -33,17 +33,17 @@ export default function Attendance({
   });
 
   const isFuture = selectedDate
-  ? selectedDate.isAfter(new Date(), "day")
-  : false;
+    ? selectedDate.isAfter(new Date(), "day")
+    : false;
 
   useEffect(() => {
     if (!companyId) return;
 
-  if (isFuture) {
-    setRows([]);
-    setStats([]);
-    return;
-  }
+    if (isFuture) {
+      setRows([]);
+      setStats([]);
+      return;
+    }
 
     const load = async () => {
       setLoading(true);
