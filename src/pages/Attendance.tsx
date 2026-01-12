@@ -19,7 +19,6 @@ const [companyId, setCompanyId] = useState<string | null>(null);
     severity: "success" as "success" | "error" | "info",
   });
 
-console.log("Company ID:", companyId);
   useEffect(() => {
     if (!companyId) return;
 
