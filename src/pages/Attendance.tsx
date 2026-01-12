@@ -1,160 +1,247 @@
+import { useEffect, useState,useCallback} from "react";
 import Layout from "../components/Layout";
-import {
-  Box,
-  Stack,
-  Typography,
-  Paper,
-  Chip,
-} from "@mui/material";
+import { Box, Stack, Typography, Paper, Chip } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-
-/* ----------------------------------
-   Summary cards (top stats)
----------------------------------- */
-const stats = [
-  { label: "On Time", value: 265, color: "success" },
-  { label: "Late Clock-in", value: 62, color: "warning" },
-  { label: "Early Clock-out", value: 224, color: "warning" },
-  { label: "Absent", value: 42, color: "error" },
-  { label: "No Clock-in", value: 36, color: "error" },
-  { label: "No Clock-out", value: 0, color: "default" },
-];
-
-/* ----------------------------------
-   Table columns
----------------------------------- */
-const columns: GridColDef[] = [
-  {
-    field: "employee",
-    headerName: "Employee",
-    width: 220,
-    renderCell: (params) => (
-      <Stack>
-        <Typography fontWeight={600}>{params.value}</Typography>
-        <Typography variant="caption" color="text.secondary">
-          {params.row.employeeId}
-        </Typography>
-      </Stack>
-    ),
-  },
-  {
-    field: "clock",
-    headerName: "Clock In / Out",
-    width: 220,
-    renderCell: (params) => (
-      <Stack>
-        <Typography color="success.main">{params.row.clockIn}</Typography>
-        <Typography color="error.main">{params.row.clockOut}</Typography>
-      </Stack>
-    ),
-  },
-  {
-    field: "hours",
-    headerName: "Worked",
-    width: 120,
-  },
-  {
-    field: "overtime",
-    headerName: "Overtime",
-    width: 120,
-  },
-  {
-    field: "location",
-    headerName: "Location",
-    width: 200,
-  },
-  {
-    field: "note",
-    headerName: "Note",
-    flex: 1,
-  },
-];
-
-const rows = [
-  {
-    id: 1,
-    employee: "Bagus Fikri",
-    employeeId: "39486846",
-    clockIn: "10:02 AM",
-    clockOut: "07:00 PM",
-    hours: "8h 58m",
-    overtime: "2h 12m",
-    location: "Jl. Jendral Sudirman",
-    note: "Discussed mutual value proposition",
-  },
-  {
-    id: 2,
-    employee: "Hidzein",
-    employeeId: "35434543",
-    clockIn: "09:30 AM",
-    clockOut: "07:12 PM",
-    hours: "8h 18m",
-    overtime: "-",
-    location: "Jl. Ahmad Yani",
-    note: "Tynisha already lined up",
-  },
-];
+import { ref, get } from "firebase/database";
+import { getCompanyId } from "../auth/authCompany";
+import { db } from "../api/firebase";
 
 export default function Attendance() {
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const [rows, setRows] = useState<any[]>([]);
+const [companyId, setCompanyId] = useState<string | null>(null);
+  const [stats, setStats] = useState<any[]>([]);
+   const [snack, setSnack] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error" | "info",
+  });
+
+console.log("Company ID:", companyId);
+  useEffect(() => {
+    if (!companyId) return;
+
+    const load = async () => {
+      const empSnap = await get(ref(db, `companies/${companyId}/employees`));
+      const attSnap = await get(
+        ref(db, `companies/${companyId}/attendance/${today}`)
+      );
+      const rulesSnap = await get(
+        ref(db, `companies/${companyId}/info/settings`)
+      );
+
+      const employees = empSnap.val() || {};
+      const attendance = attSnap.val() || {};
+      const rulesVal = rulesSnap.val() || {};
+
+      const startStr = rulesVal.workingHours?.start ?? "08:00";
+      const endStr = rulesVal.workingHours?.end ?? "17:00";
+      const grace = rulesVal.clockingRules?.graceMinutes ?? 0;
+
+      const [sh, sm] = startStr.split(":").map(Number);
+      const [eh, em] = endStr.split(":").map(Number);
+
+      let onTime = 0;
+      let late = 0;
+      let earlyOut = 0;
+      let absent = 0;
+      let noIn = 0;
+      let noOut = 0;
+
+      let grid: any[] = [];
+      let id = 1;
+
+      Object.keys(employees).forEach((empId) => {
+        const emp = employees[empId];
+        const rec = attendance[empId];
+
+        // No record → Absent
+        if (!rec) {
+          absent++;
+          grid.push({
+            id: id++,
+            employee: `${emp.firstName} ${emp.lastName}`,
+            employeeId: emp.industryNumber,
+            clockIn: "-",
+            clockOut: "-",
+            hours: "-",
+            overtime: "-",
+            location: "Site",
+            note: "Absent",
+          });
+          return;
+        }
+
+        if (!rec.clockIn) noIn++;
+        if (!rec.clockOut) noOut++;
+
+        const clockInTime = rec.clockIn ? new Date(rec.clockIn) : null;
+        const clockOutTime = rec.clockOut ? new Date(rec.clockOut) : null;
+
+        let status = "";
+
+        // Late / On time
+        if (clockInTime) {
+          const shiftStart = new Date(clockInTime);
+          shiftStart.setHours(sh, sm + grace, 0, 0);
+
+          if (clockInTime <= shiftStart) {
+            onTime++;
+            status = "On Time";
+          } else {
+            late++;
+            status = "Late";
+          }
+        }
+
+        // Early out
+        if (clockOutTime) {
+          const shiftEnd = new Date(clockOutTime);
+          shiftEnd.setHours(eh, em, 0, 0);
+
+          if (clockOutTime < shiftEnd) {
+            earlyOut++;
+            status = "Early Out";
+          }
+        }
+
+        grid.push({
+          id: id++,
+          employee: `${emp.firstName} ${emp.lastName}`,
+          employeeId: emp.industryNumber,
+          clockIn: clockInTime
+            ? clockInTime.toLocaleTimeString("en-ZA", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })
+            : "-",
+          clockOut: clockOutTime
+            ? clockOutTime.toLocaleTimeString("en-ZA", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })
+            : "-",
+          hours: "-",
+          overtime: "-",
+          location: "Site",
+          note: status,
+        });
+      });
+
+      setRows(grid);
+      setStats([
+        { label: "On Time", value: onTime, color: "success" },
+        { label: "Late Clock-in", value: late, color: "warning" },
+        { label: "Early Clock-out", value: earlyOut, color: "warning" },
+        { label: "Absent", value: absent, color: "error" },
+        { label: "No Clock-in", value: noIn, color: "error" },
+        { label: "No Clock-out", value: noOut, color: "default" },
+      ]);
+    };
+
+    load();
+  }, [companyId, today]);
+const notify = useCallback(
+    (message: string, severity: "success" | "error" | "info") =>
+      setSnack({ open: true, message, severity }),
+    []
+  );
+  useEffect(() => {
+      getCompanyId()
+        .then(setCompanyId)
+        .catch((err) => {
+          console.error(err);
+          notify("User not linked to a company", "error");
+        });
+    }, [notify]);
+
+  const columns: GridColDef[] = [
+    {
+      field: "employee",
+      headerName: "Employee",
+      width: 220,
+      renderCell: (params) => (
+        <Stack>
+          <Typography fontWeight={600}>{params.value}</Typography>
+          <Typography variant="caption">{params.row.employeeId}</Typography>
+        </Stack>
+      ),
+    },
+    {
+      field: "clockIn",
+      headerName: "Clock In",
+      width: 130,
+      renderCell: (params) => (
+        <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+          <Typography color="success.main">{params.value}</Typography>
+        </Box>
+      ),
+    },
+    {
+      field: "clockOut",
+      headerName: "Clock Out",
+      width: 130,
+      renderCell: (params) => (
+        <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+          <Typography color="error.main">{params.value}</Typography>
+        </Box>
+      ),
+    },
+    { field: "hours", headerName: "Worked", width: 120 },
+    { field: "overtime", headerName: "Overtime", width: 120 },
+    { field: "location", headerName: "Location", width: 150 },
+    {
+  field: "note",
+  headerName: "Status",
+  flex: 1,
+  renderCell: (params) => {
+    const value = params.value;
+
+    let color: any = "default";
+
+    if (value === "Late") color = "warning";
+    if (value === "On Time") color = "success";
+    if (value === "Early Out") color = "warning";
+    if (value === "Absent") color = "error";
+
+    return (
+      <Chip
+        label={value || "-"}
+        color={color}
+        size="small"
+        sx={{ fontWeight: 600 }}
+      />
+    );
+  },
+},
+
+  ];
+
   return (
     <Layout currentPage="Attendance">
       <Box p={3}>
-        {/* Header */}
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-        >
-          <Typography variant="h4" fontWeight={600}>
-            Attendance
-          </Typography>
-        </Stack>
+        <Typography variant="h4" fontWeight={600}>
+          Attendance
+        </Typography>
 
-        {/* Stats */}
-        <Stack direction="row" spacing={2} mb={3} flexWrap="wrap">
+        <Stack direction="row" spacing={2} my={3} flexWrap="wrap">
           {stats.map((s) => (
-            <Paper
-              key={s.label}
-              sx={{
-                px: 2.5,
-                py: 2,
-                minWidth: 160,
-                borderRadius: 2,
-              }}
-            >
-              <Typography variant="caption" color="text.secondary">
-                {s.label}
-              </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                {s.value}
-              </Typography>
-              <Chip
-                size="small"
-                label="vs yesterday"
-                color={s.color as any}
-                sx={{ mt: 1 }}
-              />
+            <Paper key={s.label} sx={{ p: 2, minWidth: 160 }}>
+              <Typography variant="caption">{s.label}</Typography>
+              <Typography variant="h5">{s.value}</Typography>
+              <Chip label="Today" color={s.color as any} size="small" />
             </Paper>
           ))}
         </Stack>
 
-        {/* Table */}
-        <Paper sx={{ height: 600, borderRadius: 2 }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            disableRowSelectionOnClick
-            pageSizeOptions={[10, 25]}
-            sx={{
-              border: "none",
-              "& .MuiDataGrid-columnHeaders": {
-                backgroundColor: "#fafafa",
-                fontWeight: 600,
-              },
-            }}
-          />
+        <Paper sx={{ height: 600 }}>
+          <DataGrid rows={rows} columns={columns} />
         </Paper>
+        
       </Box>
     </Layout>
   );
