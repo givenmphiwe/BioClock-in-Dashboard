@@ -65,7 +65,9 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   let mainContent: React.ReactNode;
   switch (selectedIndex) {
     case 1:
-      mainContent = <Attendance />;
+      mainContent = (
+        <Attendance selectedDate={selectedDate} onDateChange={setSelectedDate} />
+      );
       break;
     case 2:
       mainContent = <Employees/>;

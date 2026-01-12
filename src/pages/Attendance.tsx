@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { type Dayjs } from 'dayjs';
 import Layout from "../components/Layout";
 import { Box, Stack, Typography, Paper, Chip } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
@@ -6,8 +7,14 @@ import { ref, get } from "firebase/database";
 import { getCompanyId } from "../auth/authCompany";
 import { db } from "../api/firebase";
 
-export default function Attendance() {
+type AttendanceProps = {
+  selectedDate?: Dayjs | null;
+  onDateChange?: (d: Dayjs | null) => void;
+};
+
+export default function Attendance({ selectedDate, onDateChange }: AttendanceProps) {
   const today = new Date().toISOString().split("T")[0];
+  const selectedDateStr = selectedDate ? selectedDate.format('YYYY-MM-DD') : today;
 
   const [rows, setRows] = useState<any[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -24,7 +31,7 @@ export default function Attendance() {
     const load = async () => {
       const empSnap = await get(ref(db, `companies/${companyId}/employees`));
       const attSnap = await get(
-        ref(db, `companies/${companyId}/attendance/${today}`)
+        ref(db, `companies/${companyId}/attendance/${selectedDateStr}`)
       );
       const rulesSnap = await get(
         ref(db, `companies/${companyId}/info/settings`)
@@ -142,7 +149,7 @@ export default function Attendance() {
     };
 
     load();
-  }, [companyId, today]);
+  }, [companyId, selectedDateStr]);
   const notify = useCallback(
     (message: string, severity: "success" | "error" | "info") =>
       setSnack({ open: true, message, severity }),
@@ -219,7 +226,7 @@ export default function Attendance() {
   ];
 
   return (
-    <Layout currentPage="Attendance">
+    <Layout currentPage="Attendance" selectedDate={selectedDate} onDateChange={onDateChange}>
       <Box p={3}>
         <Typography variant="h4" fontWeight={600}>
           Attendance
