@@ -15,6 +15,7 @@ export type StatCardProps = {
   interval: string;
   trend: 'up' | 'down' | 'neutral';
   data: number[];
+  labels: string[];  
 };
 
 function getDaysInMonth(month: number, year: number) {
@@ -49,9 +50,9 @@ export default function StatCard({
   interval,
   trend,
   data,
+  labels
 }: StatCardProps) {
   const theme = useTheme();
-  const daysInWeek = getDaysInMonth(4, 2024);
 
   const trendColors = {
     up:
@@ -109,10 +110,7 @@ export default function StatCard({
               area
               showHighlight
               showTooltip
-              xAxis={{
-                scaleType: 'band',
-                data: daysInWeek, // Use the correct property 'data' for xAxis
-              }}
+            xAxis={{ scaleType: 'band', data: labels }}
               sx={{
                 [`& .${areaElementClasses.root}`]: {
                   fill: `url(#area-gradient-${value})`,

@@ -101,82 +101,67 @@ export default function Payroll({ selectedDate, onDateChange }: PayrollProps) {
 
   /* ------------------ Build Payroll ------------------ */
 
-  const payrollRows = useMemo(() => {
-    const rows: any[] = [];
+ const payrollRows = useMemo(() => {
+  const rows: any[] = [];
 
-    Object.entries(employees).forEach(([empId, emp]: any) => {
-      let hours = 0;
+  Object.entries(employees).forEach(([empId, emp]: any) => {
+    let totalHours = 0;
+    let overtime = 0;
 
-      Object.entries(attendance).forEach(([date, day]: any) => {
-        const recordDate = dayjs(date);
-        const rec = day[empId];
-        if (!rec?.clockIn) return;
+    Object.entries(attendance).forEach(([date, day]: any) => {
+      const recordDate = dayjs(date);
+      const rec = day[empId];
+      if (!rec?.clockIn || !rec.clockOut) return;
 
-        // ---------------- DAY MODE ----------------
-        if (viewMode === "day") {
-          if (!selectedDate) return;
-          if (!recordDate.isSame(selectedDate, "day")) return;
+      if (viewMode === "day" && selectedDate && !recordDate.isSame(selectedDate, "day")) return;
+      if (viewMode === "month" && selectedDate && !recordDate.isSame(selectedDate, "month")) return;
 
-          let end = rec.clockOut;
+      const [startH, startM] = (workingHours.start ).split(":").map(Number);
+      const [endH, endM] = (workingHours.end ).split(":").map(Number);
 
-          // If today and still clocked in, count until now
-          if (recordDate.isSame(dayjs(), "day") && !rec.clockOut) {
-            end = Date.now();
-          }
+      const shiftStart = recordDate.hour(startH).minute(startM).second(0).millisecond(0).valueOf();
+      const shiftEnd = recordDate.hour(endH).minute(endM).second(0).millisecond(0).valueOf();
 
-          if (end) {
-            hours += toHours(end - rec.clockIn);
-          }
-          return;
-        }
+      // Clamp to paid window
+      const paidStart = Math.max(rec.clockIn, shiftStart);
+      const paidEnd = rec.clockOut;
 
-        // ---------------- MONTH MODE ----------------
-        if (viewMode === "month") {
-          if (!selectedDate) return;
-          if (!recordDate.isSame(selectedDate, "month")) return;
+      if (paidEnd <= paidStart) return;
 
-          let end = rec.clockOut;
+      const worked = toHours(paidEnd - paidStart);
+      const dailyLimit = toHours(shiftEnd - shiftStart);
 
-          // If today and still clocked in, count until now
-          if (recordDate.isSame(dayjs(), "day") && !rec.clockOut) {
-            end = Date.now();
-          }
+      totalHours += worked;
 
-          if (end) {
-            hours += toHours(end - rec.clockIn);
-          }
-        }
-      });
-
-      const occKey = emp.occupationName?.toLowerCase().replace(/ /g, "_");
-      const rate = payRates[occKey]?.hourly || 0;
-      const otMult = payRates[occKey]?.overtime || 1.5;
-
-      const start = parseInt((workingHours.start || "08:00").split(":")[0]);
-      const end = parseInt((workingHours.end || "17:00").split(":")[0]);
-      const daily = end - start || 8;
-
-      const normalHours = Math.min(hours, daily);
-      const overtime = Math.max(0, hours - daily);
-
-      const normalPay = normalHours * rate;
-      const otPay = overtime * rate * otMult;
-
-      rows.push({
-        id: empId,
-        name: emp.firstName + " " + emp.lastName,
-        occupation: emp.occupationName,
-        rate,
-        hours,
-        overtime,
-        normalPay,
-        otPay,
-        total: normalPay + otPay,
-      });
+      if (worked > dailyLimit) {
+        overtime += worked - dailyLimit;
+      }
     });
 
-    return rows;
-  }, [employees, attendance, payRates, workingHours, selectedDate]);
+    const normalHours = totalHours - overtime;
+
+    const occKey = emp.occupationName?.toLowerCase().replace(/ /g, "_");
+    const rate = payRates[occKey]?.hourly || 0;
+    const otMult = payRates[occKey]?.overtime || 1.5;
+
+    const normalPay = normalHours * rate;
+    const otPay = overtime * rate * otMult;
+
+    rows.push({
+      id: empId,
+      name: emp.firstName + " " + emp.lastName,
+      occupation: emp.occupationName,
+      rate,
+      hours: totalHours,
+      overtime,
+      normalPay,
+      otPay,
+      total: normalPay + otPay,
+    });
+  });
+
+  return rows;
+}, [employees, attendance, payRates, workingHours, selectedDate, viewMode]);
 
   /* ------------------ Filters ------------------ */
 
