@@ -104,9 +104,6 @@ export default function Payroll({ selectedDate, onDateChange }: PayrollProps) {
   const payrollRows = useMemo(() => {
     const rows: any[] = [];
 
-    const selected = selectedDate ?? dayjs();
-    const isToday = selected.isSame(dayjs(), "day");
-
     Object.entries(employees).forEach(([empId, emp]: any) => {
       let hours = 0;
 
