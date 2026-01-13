@@ -39,7 +39,7 @@ export default function Payroll({ selectedDate, onDateChange }: PayrollProps) {
   const [search, setSearch] = useState("");
   const [occupationFilter, setOccupationFilter] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<"day" | "month">("day");
+  const [viewMode, setViewMode] = useState<"day" | "month">("month");
 
   /* ------------------ Resolve Company ------------------ */
   useEffect(() => {
