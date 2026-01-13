@@ -7,6 +7,9 @@ import dayjs from "dayjs";
 import React from "react";
 import { db } from "../../api/firebase";
 import { getCompanyId } from "../../auth/authCompany";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+dayjs.extend(relativeTime);
 
 /* ---------------- HELPERS ---------------- */
 
@@ -39,25 +42,34 @@ function renderSparklineCell(params: GridCellParams<SparkLineData, any>) {
   );
 }
 
-function renderStatus(status: "Online" | "Offline") {
-  return (
-    <Chip
-      label={status}
-      color={status === "Online" ? "success" : "default"}
-      size="small"
-    />
-  );
+/* ---------------- STATUS ---------------- */
+
+function renderStatus(value: any) {
+  if (!value) return <Chip label="Offline" size="small" />;
+
+  const { online, lastSeen } = value;
+
+  if (online) {
+    return <Chip label="Online" color="success" size="small" />;
+  }
+
+  if (lastSeen) {
+    const time = dayjs(lastSeen).fromNow();
+    return <Chip label={`seen ${time}`} size="small" />;
+  }
+
+  return <Chip label="Offline" size="small" />;
 }
 
-/* ---------------- COLUMNS (unchanged UI) ---------------- */
+/* ---------------- COLUMNS ---------------- */
 
 export const columns: GridColDef[] = [
   { field: "pageTitle", headerName: "App Users", flex: 1.5, minWidth: 200 },
   {
     field: "status",
     headerName: "Status",
-    flex: 0.5,
-    minWidth: 80,
+    flex: 0.8,
+    minWidth: 140,
     renderCell: (p) => renderStatus(p.value),
   },
   { field: "users", headerName: "Users", align: "right", flex: 1 },
@@ -80,64 +92,75 @@ export function useGridRows() {
   const [gridRows, setGridRows] = React.useState<GridRowsProp>([]);
 
   React.useEffect(() => {
-    const companyId = "company_001";
-    const today = dayjs().format("YYYY-MM-DD");
-    const daysInMonth = Array.from({ length: dayjs().daysInMonth() }, (_, i) =>
-      dayjs().date(i + 1).format("YYYY-MM-DD")
-    );
+    let unsubscribers: any[] = [];
 
-    const usersRef = ref(db, `companies/${companyId}/users`);
-    const userEmployeesRef = ref(db, `companies/${companyId}/userEmployees`);
-    const presenceRef = ref(db, `companies/${companyId}/presence`);
-    const attendanceRef = ref(db, `companies/${companyId}/attendance`);
+    const load = async () => {
+      const companyId = await getCompanyId();
+      if (!companyId) return;
 
-    const unsubscribe = onValue(usersRef, (userSnap) => {
-      const users = userSnap.val() || {};
+      const today = dayjs().format("YYYY-MM-DD");
 
-      onValue(userEmployeesRef, (linkSnap) => {
-        const links = linkSnap.val() || {};
+      const daysInMonth = Array.from(
+        { length: dayjs().daysInMonth() },
+        (_, i) => dayjs().date(i + 1).format("YYYY-MM-DD")
+      );
 
-        onValue(presenceRef, (presSnap) => {
-          const presence = presSnap.val() || {};
+      const usersRef = ref(db, `companies/${companyId}/users`);
+      const userEmployeesRef = ref(db, `companies/${companyId}/userEmployees`);
+      const presenceRef = ref(db, `companies/${companyId}/presence`);
+      const attendanceRef = ref(db, `companies/${companyId}/attendance`);
 
-          onValue(attendanceRef, (attSnap) => {
-            const attendance = attSnap.val() || {};
-            const newRows: GridRowsProp = [];
+      const unsubUsers = onValue(usersRef, (userSnap) => {
+        const users = userSnap.val() || {};
 
-            Object.keys(users).forEach((uid) => {
-              const user = users[uid];
-              const empMap = links[uid] || {};
-              const empIds = Object.keys(empMap);
+        const unsubLinks = onValue(userEmployeesRef, (linkSnap) => {
+          const links = linkSnap.val() || {};
 
-              const todayCount = empIds.filter(
-                (eid) => attendance[today]?.[eid]?.clockIn
-              ).length;
+          const unsubPresence = onValue(presenceRef, (presSnap) => {
+            const presence = presSnap.val() || {};
 
-              const conversions = daysInMonth.map(
-                (d) => empIds.filter((eid) => attendance[d]?.[eid]?.clockIn).length
-              );
+            const unsubAttendance = onValue(attendanceRef, (attSnap) => {
+              const attendance = attSnap.val() || {};
+              const newRows: GridRowsProp = [];
 
-              newRows.push({
-                id: uid,
-                pageTitle: user.name,
-                status: presence[uid]?.online ? "Online" : "Offline",
-                users: empIds.length,
-                eventCount: todayCount,
-                viewsPerUser: "",
-                averageTime: "",
-                conversions,
+              Object.keys(users).forEach((uid) => {
+                const user = users[uid];
+                const empMap = links[uid] || {};
+                const empIds = Object.keys(empMap);
+
+                const todayCount = empIds.filter(
+                  (eid) => attendance[today]?.[eid]?.clockIn
+                ).length;
+
+                const conversions = daysInMonth.map(
+                  (d) =>
+                    empIds.filter((eid) => attendance[d]?.[eid]?.clockIn).length
+                );
+
+                newRows.push({
+                  id: uid,
+                  pageTitle: user.name || "Unknown",
+                  status: presence[uid] || { online: false },
+                  users: empIds.length,
+                  eventCount: todayCount,
+                  viewsPerUser: "",
+                  averageTime: "",
+                  conversions,
+                });
               });
-            });
 
-            setGridRows(newRows);
-            rows = newRows;
+              setGridRows(newRows);
+              rows = newRows;
+            });
           });
         });
       });
-    });
+    };
+
+    load();
 
     return () => {
-      // Cleanup if needed
+      unsubscribers.forEach((u) => u && u());
     };
   }, []);
 
