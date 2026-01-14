@@ -101,67 +101,93 @@ export default function Payroll({ selectedDate, onDateChange }: PayrollProps) {
 
   /* ------------------ Build Payroll ------------------ */
 
- const payrollRows = useMemo(() => {
-  const rows: any[] = [];
+  const payrollRows = useMemo(() => {
+    const rows: any[] = [];
 
-  Object.entries(employees).forEach(([empId, emp]: any) => {
-    let totalHours = 0;
-    let overtime = 0;
+    Object.entries(employees).forEach(([empId, emp]: any) => {
+      let totalHours = 0;
+      let overtime = 0;
 
-    Object.entries(attendance).forEach(([date, day]: any) => {
-      const recordDate = dayjs(date);
-      const rec = day[empId];
-      if (!rec?.clockIn || !rec.clockOut) return;
+      Object.entries(attendance).forEach(([date, day]: any) => {
+        const recordDate = dayjs(date);
+        const rec = day[empId];
+        if (!rec?.clockIn || !rec.clockOut) return;
 
-      if (viewMode === "day" && selectedDate && !recordDate.isSame(selectedDate, "day")) return;
-      if (viewMode === "month" && selectedDate && !recordDate.isSame(selectedDate, "month")) return;
+        if (
+          viewMode === "day" &&
+          selectedDate &&
+          !recordDate.isSame(selectedDate, "day")
+        )
+          return;
+        if (
+          viewMode === "month" &&
+          selectedDate &&
+          !recordDate.isSame(selectedDate, "month")
+        )
+          return;
 
-      const [startH, startM] = (workingHours.start ).split(":").map(Number);
-      const [endH, endM] = (workingHours.end ).split(":").map(Number);
+        const startStr =
+          typeof workingHours?.start === "string"
+            ? workingHours.start
+            : "01:00";
+        const endStr =
+          typeof workingHours?.end === "string" ? workingHours.end : "23:00";
+        const [startH, startM] = startStr.split(":").map(Number);
+        const [endH, endM] = endStr.split(":").map(Number);
 
-      const shiftStart = recordDate.hour(startH).minute(startM).second(0).millisecond(0).valueOf();
-      const shiftEnd = recordDate.hour(endH).minute(endM).second(0).millisecond(0).valueOf();
+        const shiftStart = recordDate
+          .hour(startH)
+          .minute(startM)
+          .second(0)
+          .millisecond(0)
+          .valueOf();
+        const shiftEnd = recordDate
+          .hour(endH)
+          .minute(endM)
+          .second(0)
+          .millisecond(0)
+          .valueOf();
 
-      // Clamp to paid window
-      const paidStart = Math.max(rec.clockIn, shiftStart);
-      const paidEnd = rec.clockOut;
+        // Clamp to paid window
+        const paidStart = Math.max(rec.clockIn, shiftStart);
+        const paidEnd = rec.clockOut;
 
-      if (paidEnd <= paidStart) return;
+        if (paidEnd <= paidStart) return;
 
-      const worked = toHours(paidEnd - paidStart);
-      const dailyLimit = toHours(shiftEnd - shiftStart);
+        const worked = toHours(paidEnd - paidStart);
+        const dailyLimit = toHours(shiftEnd - shiftStart);
 
-      totalHours += worked;
+        totalHours += worked;
 
-      if (worked > dailyLimit) {
-        overtime += worked - dailyLimit;
-      }
+        if (worked > dailyLimit) {
+          overtime += worked - dailyLimit;
+        }
+      });
+
+      const normalHours = totalHours - overtime;
+
+      const occKey = emp.occupationName?.toLowerCase().replace(/ /g, "_");
+      const rate = payRates[occKey]?.hourly || 0;
+      const otMult = payRates[occKey]?.overtime || 1.5;
+
+      const normalPay = normalHours * rate;
+      const otPay = overtime * rate * otMult;
+
+      rows.push({
+        id: empId,
+        name: emp.firstName + " " + emp.lastName,
+        occupation: emp.occupationName,
+        rate,
+        hours: totalHours,
+        overtime,
+        normalPay,
+        otPay,
+        total: normalPay + otPay,
+      });
     });
 
-    const normalHours = totalHours - overtime;
-
-    const occKey = emp.occupationName?.toLowerCase().replace(/ /g, "_");
-    const rate = payRates[occKey]?.hourly || 0;
-    const otMult = payRates[occKey]?.overtime || 1.5;
-
-    const normalPay = normalHours * rate;
-    const otPay = overtime * rate * otMult;
-
-    rows.push({
-      id: empId,
-      name: emp.firstName + " " + emp.lastName,
-      occupation: emp.occupationName,
-      rate,
-      hours: totalHours,
-      overtime,
-      normalPay,
-      otPay,
-      total: normalPay + otPay,
-    });
-  });
-
-  return rows;
-}, [employees, attendance, payRates, workingHours, selectedDate, viewMode]);
+    return rows;
+  }, [employees, attendance, payRates, workingHours, selectedDate, viewMode]);
 
   /* ------------------ Filters ------------------ */
 
