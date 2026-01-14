@@ -179,7 +179,7 @@ const toHours = (ms: number) => ms / 1000 / 60 / 60;
                   hour12: false,
                 })
               : "-",
-            hours: workedHours ? workedHours.toFixed(2) : "-",
+            hours: workedHours ? workedHours.toFixed(2) + " hrs" : "-",
             overtime: "-",
             location: "Site",
             note: status,
