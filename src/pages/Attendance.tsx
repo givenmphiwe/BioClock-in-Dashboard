@@ -35,7 +35,7 @@ export default function Attendance({
   const isFuture = selectedDate
     ? selectedDate.isAfter(new Date(), "day")
     : false;
-
+const toHours = (ms: number) => ms / 1000 / 60 / 60;
   useEffect(() => {
     if (!companyId) return;
 
@@ -61,12 +61,7 @@ export default function Attendance({
         const attendance = attSnap.val() || {};
         const rulesVal = rulesSnap.val() || {};
 
-        const startStr = rulesVal.workingHours?.start ?? "08:00";
-        const endStr = rulesVal.workingHours?.end ?? "17:00";
-        const grace = rulesVal.clockingRules?.graceMinutes ?? 0;
-
-        const [sh, sm] = startStr.split(":").map(Number);
-        const [eh, em] = endStr.split(":").map(Number);
+        const workingHours = rulesVal.workingHours || {};
 
         let onTime = 0;
         let late = 0;
@@ -82,7 +77,18 @@ export default function Attendance({
           const emp = employees[empId];
           const rec = attendance[empId];
 
-          // No record → Absent
+          const shiftType = rec?.shift || emp.shift || "day";
+          const shift = workingHours[shiftType];
+
+          if (!shift) return;
+
+          const [sh, sm] = shift.start.split(":").map(Number);
+          const [eh, em] = shift.end.split(":").map(Number);
+          const grace = rulesVal.clockingRules?.graceMinutes || 0;
+
+          const isNight = eh < sh || (eh === sh && em < sm);
+
+          // Absent
           if (!rec) {
             absent++;
             grid.push({
@@ -105,35 +111,56 @@ export default function Attendance({
           const clockInTime = rec.clockIn ? new Date(rec.clockIn) : null;
           const clockOutTime = rec.clockOut ? new Date(rec.clockOut) : null;
 
-          let status = "";
+          let workedHours = 0;
 
-          if (rec.earlyLeave) {
-            earlyOut++;
-            status = "Early Leave";
-          } else {
-            if (clockInTime) {
-              const shiftStart = new Date(clockInTime);
-              shiftStart.setHours(sh, sm + grace, 0, 0);
+          if (clockInTime && clockOutTime) {
+            const shiftStart = new Date(clockInTime);
+            shiftStart.setHours(sh, sm, 0, 0);
 
-              if (clockInTime <= shiftStart) {
-                onTime++;
-                status = "On Time";
-              } else {
-                late++;
-                status = "Late";
-              }
+            const shiftEnd = new Date(clockInTime);
+            shiftEnd.setHours(eh, em, 0, 0);
+
+            if (isNight) {
+              shiftEnd.setDate(shiftEnd.getDate() + 1);
             }
 
-            if (clockOutTime) {
-              const shiftEnd = new Date(clockOutTime);
-              shiftEnd.setHours(eh, em, 0, 0);
+            const paidStart = Math.max(rec.clockIn, shiftStart.getTime());
+            const paidEnd = Math.min(rec.clockOut, shiftEnd.getTime());
 
-              if (clockOutTime < shiftEnd) {
-                earlyOut++;
-                status = "Early Out";
-              }
+            if (paidEnd > paidStart) {
+              workedHours = toHours(paidEnd - paidStart);
             }
           }
+
+          let status = "";
+
+          if (clockInTime) {
+            const shiftStart = new Date(clockInTime);
+            shiftStart.setHours(sh, sm + grace, 0, 0);
+
+            if (clockInTime <= shiftStart) {
+              onTime++;
+              status = "On Time";
+            } else {
+              late++;
+              status = "Late";
+            }
+          }
+
+          if (clockOutTime) {
+            const shiftEnd = new Date(clockInTime || clockOutTime);
+            shiftEnd.setHours(eh, em, 0, 0);
+
+            if (isNight) {
+              shiftEnd.setDate(shiftEnd.getDate() + 1);
+            }
+
+            if (clockOutTime < shiftEnd) {
+              earlyOut++;
+              status = "Early Out";
+            }
+          }
+
           grid.push({
             id: id++,
             employee: `${emp.firstName} ${emp.lastName}`,
@@ -152,7 +179,7 @@ export default function Attendance({
                   hour12: false,
                 })
               : "-",
-            hours: "-",
+            hours: workedHours ? workedHours.toFixed(2) : "-",
             overtime: "-",
             location: "Site",
             note: status,

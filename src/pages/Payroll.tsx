@@ -110,6 +110,7 @@ export default function Payroll({ selectedDate, onDateChange }: PayrollProps) {
 
       Object.entries(attendance).forEach(([date, day]: any) => {
         const recordDate = dayjs(date);
+
         const rec = day[empId];
         if (!rec?.clockIn || !rec.clockOut) return;
 
@@ -126,36 +127,34 @@ export default function Payroll({ selectedDate, onDateChange }: PayrollProps) {
         )
           return;
 
-        const startStr =
-          typeof workingHours?.start === "string"
-            ? workingHours.start
-            : "01:00";
-        const endStr =
-          typeof workingHours?.end === "string" ? workingHours.end : "23:00";
-        const [startH, startM] = startStr.split(":").map(Number);
-        const [endH, endM] = endStr.split(":").map(Number);
+        const shiftType = rec.shift || emp.shift || "day";
+        const shift = workingHours[shiftType];
 
-        const shiftStart = recordDate
-          .hour(startH)
-          .minute(startM)
-          .second(0)
-          .millisecond(0)
-          .valueOf();
-        const shiftEnd = recordDate
-          .hour(endH)
-          .minute(endM)
-          .second(0)
-          .millisecond(0)
-          .valueOf();
+        if (!shift) return;
 
-        // Clamp to paid window
-        const paidStart = Math.max(rec.clockIn, shiftStart);
-        const paidEnd = rec.clockOut;
+        const [sh, sm] = shift.start.split(":").map(Number);
+        const [eh, em] = shift.end.split(":").map(Number);
+
+        const isNight = eh < sh || (eh === sh && em < sm);
+
+        let shiftStart = recordDate
+          .hour(sh)
+          .minute(sm)
+          .second(0)
+          .millisecond(0);
+        let shiftEnd = recordDate.hour(eh).minute(em).second(0).millisecond(0);
+
+        if (isNight) {
+          shiftEnd = shiftEnd.add(1, "day");
+        }
+
+        const paidStart = Math.max(rec.clockIn, shiftStart.valueOf());
+        const paidEnd = Math.min(rec.clockOut, shiftEnd.valueOf());
 
         if (paidEnd <= paidStart) return;
 
         const worked = toHours(paidEnd - paidStart);
-        const dailyLimit = toHours(shiftEnd - shiftStart);
+        const dailyLimit = toHours(shiftEnd.valueOf() - shiftStart.valueOf());
 
         totalHours += worked;
 
@@ -279,12 +278,12 @@ export default function Payroll({ selectedDate, onDateChange }: PayrollProps) {
           </Paper>
           <Paper sx={{ p: 2, flex: 1 }}>
             <Typography>Total Hours</Typography>
-            <Typography variant="h6">{totals.hours.toFixed(1)} hrs</Typography>
+            <Typography variant="h6">{totals.hours.toFixed(2)} hrs</Typography>
           </Paper>
           <Paper sx={{ p: 2, flex: 1 }}>
             <Typography>Overtime</Typography>
             <Typography variant="h6">
-              {totals.overtime.toFixed(1)} hrs
+              {totals.overtime.toFixed(2)} hrs
             </Typography>
           </Paper>
         </Stack>
@@ -365,12 +364,12 @@ export default function Payroll({ selectedDate, onDateChange }: PayrollProps) {
                   <TableCell>{emp.name}</TableCell>
                   <TableCell>{emp.occupation}</TableCell>
                   <TableCell>{formatMoney(emp.rate)}</TableCell>
-                  <TableCell>{emp.hours.toFixed(1)}</TableCell>
+                  <TableCell>{emp.hours.toFixed(2)}</TableCell>
                   <TableCell>
                     {emp.overtime > 0 && (
                       <Chip
                         color="warning"
-                        label={emp.overtime.toFixed(1) + "h"}
+                        label={emp.overtime.toFixed(2) + "h"}
                       />
                     )}
                   </TableCell>

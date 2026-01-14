@@ -120,11 +120,19 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
 
       navigate("/home", { replace: true });
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data ||
-        err?.message ||
-        "Login failed";
+      // Don't show Firebase domain authorization errors to users
+      if (err?.code === "auth/unauthorized-domain") {
+        console.error("Firebase domain error:", err?.message);
+        return;
+      }
+
+      const firebaseErrors: Record<string, string> = {
+        "auth/user-not-found": "Account not found.",
+        "auth/wrong-password": "Incorrect password.",
+        "auth/too-many-requests": "Too many attempts. Try again later.",
+      };
+      const msg = firebaseErrors[err?.code] || err?.message || "Login failed";
+
       setServerError(msg);
     } finally {
       setLoading(false);
