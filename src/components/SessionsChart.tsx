@@ -6,6 +6,9 @@ import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import { LineChart } from '@mui/x-charts/LineChart';
+import { ref, get } from 'firebase/database';
+import { db } from '../api/firebase';
+import { getCompanyId } from '../auth/authCompany';
 
 function AreaGradient({ color, id }: { color: string; id: string }) {
   return (
@@ -18,30 +21,138 @@ function AreaGradient({ color, id }: { color: string; id: string }) {
   );
 }
 
-function getDaysInMonth(month: number, year: number) {
-  const date = new Date(year, month, 0);
-  const monthName = date.toLocaleDateString('en-US', {
-    month: 'short',
-  });
-  const daysInMonth = date.getDate();
+function getLast30Days() {
   const days = [];
-  let i = 1;
-  while (days.length < daysInMonth) {
-    days.push(`${monthName} ${i}`);
-    i += 1;
+  const labels = [];
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    days.push(dateStr);
+    labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
   }
-  return days;
+  return { days, labels };
 }
 
 export default function SessionsChart() {
   const theme = useTheme();
-  const data = getDaysInMonth(4, 2024);
+  const [companyId, setCompanyId] = React.useState<string | null>(null);
+  const [clockedInData, setClockedInData] = React.useState<number[]>([]);
+  const [lateData, setLateData] = React.useState<number[]>([]);
+  const [absentData, setAbsentData] = React.useState<number[]>([]);
+  const [labels, setLabels] = React.useState<string[]>([]);
+  const [totalAttendance, setTotalAttendance] = React.useState(0);
+  const [loading, setLoading] = React.useState(true);
+
+  // Fetch company ID
+  React.useEffect(() => {
+    const fetchCompanyId = async () => {
+      try {
+        const cId = await getCompanyId();
+        setCompanyId(cId);
+      } catch (err) {
+        console.error('Error fetching company ID:', err);
+      }
+    };
+    fetchCompanyId();
+  }, []);
+
+  // Fetch attendance data for last 30 days
+  React.useEffect(() => {
+    if (!companyId) return;
+
+    const fetchAttendanceData = async () => {
+      try {
+        setLoading(true);
+        const { days, labels: dayLabels } = getLast30Days();
+        const cIn: number[] = [];
+        const late: number[] = [];
+        const absent: number[] = [];
+        let totalCount = 0;
+
+        // Get all employees
+        const empSnap = await get(ref(db, `companies/${companyId}/employees`));
+        const employees = empSnap.val() || {};
+        const rulesSnap = await get(ref(db, `companies/${companyId}/info/settings`));
+        const rulesVal = rulesSnap.val() || {};
+        const grace = rulesVal.clockingRules?.graceMinutes || 0;
+        const workingHours = rulesVal.workingHours || {};
+
+        for (const dateStr of days) {
+          let clockedIn = 0;
+          let lateCount = 0;
+          let absentCount = 0;
+
+          const attSnap = await get(ref(db, `companies/${companyId}/attendance/${dateStr}`));
+          const attendance = attSnap.val() || {};
+
+          Object.keys(employees).forEach((empId) => {
+            const emp = employees[empId];
+            const rec = attendance[empId];
+            const shiftType = rec?.shift || emp.shift || 'day';
+            const shift = workingHours[shiftType];
+
+            if (!shift) return;
+
+            const [sh, sm] = shift.start.split(':').map(Number);
+
+            // Absent
+            if (!rec || !rec.clockIn) {
+              absentCount++;
+            } else {
+              const clockInTime = new Date(rec.clockIn);
+              const shiftStart = new Date(clockInTime);
+              shiftStart.setHours(sh, sm + grace, 0, 0);
+
+              if (clockInTime <= shiftStart) {
+                clockedIn++;
+              } else {
+                lateCount++;
+              }
+            }
+          });
+
+          cIn.push(clockedIn);
+          late.push(lateCount);
+          absent.push(absentCount);
+          totalCount += clockedIn + lateCount;
+        }
+
+        setClockedInData(cIn);
+        setLateData(late);
+        setAbsentData(absent);
+        setLabels(dayLabels);
+        setTotalAttendance(totalCount);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching attendance data:', err);
+        setLoading(false);
+      }
+    };
+
+    fetchAttendanceData();
+  }, [companyId]);
 
   const colorPalette = [
-    theme.palette.primary.light,
-    theme.palette.primary.main,
-    theme.palette.primary.dark,
+    theme.palette.success.main,
+    theme.palette.warning.main,
+    theme.palette.error.main,
   ];
+
+  if (loading || labels.length === 0) {
+    return (
+      <Card variant="outlined" sx={{ width: '100%' }}>
+        <CardContent>
+          <Typography component="h2" variant="subtitle2" gutterBottom>
+            Attendance Overview
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Loading attendance data...
+          </Typography>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card variant="outlined" sx={{ width: '100%' }}>
@@ -59,9 +170,9 @@ export default function SessionsChart() {
             }}
           >
             <Typography variant="h4" component="p">
-              13,277
+              {totalAttendance}
             </Typography>
-            <Chip size="small" color="success" label="+35%" />
+            <Chip size="small" color="success" label="+30 days" />
           </Stack>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Attendance per day for the last 30 days
@@ -72,53 +183,41 @@ export default function SessionsChart() {
           xAxis={[
             {
               scaleType: 'point',
-              data,
-              tickInterval: (index, i) => (i + 1) % 5 === 0,
+              data: labels,
+              tickInterval: (_, i) => (i + 1) % 5 === 0,
               height: 24,
             },
           ]}
           yAxis={[{ width: 50 }]}
           series={[
             {
-              id: 'direct',
-              label: 'Direct',
+              id: 'clockedIn',
+              label: 'Clocked In',
               showMark: false,
               curve: 'linear',
               stack: 'total',
               area: true,
               stackOrder: 'ascending',
-              data: [
-                300, 900, 600, 1200, 1500, 1800, 2400, 2100, 2700, 3000, 1800, 3300,
-                3600, 3900, 4200, 4500, 3900, 4800, 5100, 5400, 4800, 5700, 6000,
-                6300, 6600, 6900, 7200, 7500, 7800, 8100,
-              ],
+              data: clockedInData,
             },
             {
-              id: 'referral',
-              label: 'Referral',
+              id: 'late',
+              label: 'Late',
               showMark: false,
               curve: 'linear',
               stack: 'total',
               area: true,
               stackOrder: 'ascending',
-              data: [
-                500, 900, 700, 1400, 1100, 1700, 2300, 2000, 2600, 2900, 2300, 3200,
-                3500, 3800, 4100, 4400, 2900, 4700, 5000, 5300, 5600, 5900, 6200,
-                6500, 5600, 6800, 7100, 7400, 7700, 8000,
-              ],
+              data: lateData,
             },
             {
-              id: 'organic',
-              label: 'Organic',
+              id: 'absent',
+              label: 'Absent',
               showMark: false,
               curve: 'linear',
               stack: 'total',
               stackOrder: 'ascending',
-              data: [
-                1000, 1500, 1200, 1700, 1300, 2000, 2400, 2200, 2600, 2800, 2500,
-                3000, 3400, 3700, 3200, 3900, 4100, 3500, 4300, 4500, 4000, 4700,
-                5000, 5200, 4800, 5400, 5600, 5900, 6100, 6300,
-              ],
+              data: absentData,
               area: true,
             },
           ]}
@@ -126,21 +225,21 @@ export default function SessionsChart() {
           margin={{ left: 0, right: 20, top: 20, bottom: 0 }}
           grid={{ horizontal: true }}
           sx={{
-            '& .MuiAreaElement-series-organic': {
-              fill: "url('#organic')",
+            '& .MuiAreaElement-series-absent': {
+              fill: "url('#absent')",
             },
-            '& .MuiAreaElement-series-referral': {
-              fill: "url('#referral')",
+            '& .MuiAreaElement-series-late': {
+              fill: "url('#late')",
             },
-            '& .MuiAreaElement-series-direct': {
-              fill: "url('#direct')",
+            '& .MuiAreaElement-series-clockedIn': {
+              fill: "url('#clockedIn')",
             },
           }}
-          hideLegend
+
         >
-          <AreaGradient color={theme.palette.primary.dark} id="organic" />
-          <AreaGradient color={theme.palette.primary.main} id="referral" />
-          <AreaGradient color={theme.palette.primary.light} id="direct" />
+          <AreaGradient color={theme.palette.error.main} id="absent" />
+          <AreaGradient color={theme.palette.warning.main} id="late" />
+          <AreaGradient color={theme.palette.success.main} id="clockedIn" />
         </LineChart>
       </CardContent>
     </Card>
