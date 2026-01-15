@@ -35,7 +35,7 @@ export default function Attendance({
   const isFuture = selectedDate
     ? selectedDate.isAfter(new Date(), "day")
     : false;
-const toHours = (ms: number) => ms / 1000 / 60 / 60;
+  const toHours = (ms: number) => ms / 1000 / 60 / 60;
   useEffect(() => {
     if (!companyId) return;
 
