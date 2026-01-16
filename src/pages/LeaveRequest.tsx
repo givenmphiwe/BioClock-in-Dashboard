@@ -35,6 +35,7 @@ type LeaveRequest = {
   to: string;
   reason: string;
   status: LeaveStatus;
+  declineReason?: string;
 };
 
 type LeaveBalance = {
@@ -90,23 +91,21 @@ export default function LeaveRequestPage() {
 
       const mappedLeaves: LeaveRequest[] = [];
 
-      Object.entries(leaveRequests).forEach(
-        ([employeeId, requests]: any) => {
-          Object.entries(requests).forEach(
-            ([leaveId, leave]: any) => {
-              mappedLeaves.push({
-                id: leaveId,
-                employeeId,
-                employee: `${employees[employeeId]?.firstName ?? ""} ${employees[employeeId]?.lastName ?? ""}`,
-                from: leave.from.replaceAll("/", "-"),
-                to: leave.to.replaceAll("/", "-"),
-                reason: leave.reason || "",
-                status: leave.status,
-              });
-            }
-          );
-        }
-      );
+      Object.entries(leaveRequests).forEach(([employeeId, requests]: any) => {
+        Object.entries(requests).forEach(([leaveId, leave]: any) => {
+          mappedLeaves.push({
+            id: leaveId,
+            employeeId,
+            employee: `${employees[employeeId]?.firstName ?? ""} ${employees[employeeId]?.lastName ?? ""
+              }`,
+            from: leave.from.replaceAll("/", "-"),
+            to: leave.to.replaceAll("/", "-"),
+            reason: leave.reason || "",
+            status: leave.status,
+            declineReason: leave.declineReason || "",
+          });
+        });
+      });
 
       setLeaves(mappedLeaves);
       setBalances(leaveBalances);
@@ -187,13 +186,29 @@ export default function LeaveRequestPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell><b>Employee</b></TableCell>
-                <TableCell><b>From</b></TableCell>
-                <TableCell><b>To</b></TableCell>
-                <TableCell><b>Days</b></TableCell>
-                <TableCell><b>Balance Left</b></TableCell>
-                <TableCell><b>Status</b></TableCell>
-                <TableCell align="right"><b>Actions</b></TableCell>
+                <TableCell>
+                  <b>Employee</b>
+                </TableCell>
+                <TableCell>
+                  <b>From</b>
+                </TableCell>
+                <TableCell>
+                  <b>To</b>
+                </TableCell>
+                <TableCell>
+                  <b>Days</b>
+                </TableCell>
+                <TableCell>
+                  <b>Balance Left</b>
+                </TableCell>
+                <TableCell>
+                  <b>Status</b>
+                </TableCell>
+                {view === "pending" && (
+                  <TableCell align="right">
+                    <b>Actions</b>
+                  </TableCell>
+                )}
               </TableRow>
             </TableHead>
 
@@ -216,21 +231,38 @@ export default function LeaveRequestPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        size="small"
-                        label={leave.status}
-                        color={
-                          leave.status === "approved"
-                            ? "success"
-                            : leave.status === "pending"
-                            ? "warning"
-                            : "error"
-                        }
-                      />
+                      <Stack spacing={0.5}>
+                        <Chip
+                          size="small"
+                          label={leave.status}
+                          color={
+                            leave.status === "approved"
+                              ? "success"
+                              : leave.status === "pending"
+                                ? "warning"
+                                : "error"
+                          }
+                        />
+
+                        {leave.status === "declined" && leave.declineReason && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ fontStyle: "italic" }}
+                          >
+                            Reason: {leave.declineReason}
+                          </Typography>
+                        )}
+                      </Stack>
                     </TableCell>
-                    <TableCell align="right">
-                      {leave.status === "pending" && (
-                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+
+                    {leave.status === "pending" && (
+                      <TableCell align="right">
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          justifyContent="flex-end"
+                        >
                           <Button
                             size="small"
                             variant="contained"
@@ -247,8 +279,8 @@ export default function LeaveRequestPage() {
                             Decline
                           </Button>
                         </Stack>
-                      )}
-                    </TableCell>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}
@@ -257,7 +289,11 @@ export default function LeaveRequestPage() {
         </Paper>
 
         {/* DECLINE DIALOG */}
-        <Dialog open={declineOpen} onClose={() => setDeclineOpen(false)} fullWidth>
+        <Dialog
+          open={declineOpen}
+          onClose={() => setDeclineOpen(false)}
+          fullWidth
+        >
           <DialogTitle>Decline Leave</DialogTitle>
           <DialogContent>
             <Typography sx={{ mb: 1 }}>
