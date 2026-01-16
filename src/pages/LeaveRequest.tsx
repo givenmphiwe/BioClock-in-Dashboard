@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Layout from "../components/Layout";
 import {
   Box,
@@ -19,113 +19,123 @@ import {
   TextField,
 } from "@mui/material";
 
-/* ------------------ TYPES ------------------ */
+import { ref, onValue, update } from "firebase/database";
+import { db } from "../api/firebase";
+import { getCompanyId } from "../auth/authCompany";
+
+/* ================= TYPES ================= */
 
 type LeaveStatus = "pending" | "approved" | "declined";
 
 type LeaveRequest = {
   id: string;
+  employeeId: string;
   employee: string;
   from: string;
   to: string;
   reason: string;
   status: LeaveStatus;
-  declineReason?: string;
 };
 
 type LeaveBalance = {
-  [employee: string]: number;
+  [employeeId: string]: number;
 };
 
-/* ------------------ DUMMY DATA ------------------ */
-
-const initialLeaves: LeaveRequest[] = [
-  {
-    id: "1",
-    employee: "John Mokoena",
-    from: "2026-01-10",
-    to: "2026-01-12",
-    reason: "Family responsibility",
-    status: "pending",
-  },
-  {
-    id: "2",
-    employee: "Thabo Dlamini",
-    from: "2026-01-15",
-    to: "2026-01-16",
-    reason: "Medical",
-    status: "pending",
-  },
-  {
-    id: "3",
-    employee: "Sipho Khumalo",
-    from: "2026-01-05",
-    to: "2026-01-08",
-    reason: "Personal",
-    status: "approved",
-  },
-];
-
-const initialBalances: LeaveBalance = {
-  "John Mokoena": 15,
-  "Thabo Dlamini": 12,
-  "Sipho Khumalo": 10,
-};
-
-/* ------------------ HELPERS ------------------ */
+/* ================= HELPERS ================= */
 
 const calculateDays = (from: string, to: string) => {
   const start = new Date(from);
   const end = new Date(to);
-  const diff =
-    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-  return diff + 1; // inclusive
+  return (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) + 1;
 };
 
-/* ------------------ PAGE ------------------ */
+/* ================= PAGE ================= */
 
-export default function LeaveRequest() {
-  const [leaves, setLeaves] = useState<LeaveRequest[]>(initialLeaves);
-  const [balances, setBalances] = useState<LeaveBalance>(initialBalances);
-
-  const [view, setView] = useState<
-    "current" | "pending" | "approved" | "declined"
-  >("pending");
+export default function LeaveRequestPage() {
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [balances, setBalances] = useState<LeaveBalance>({});
+  const [view, setView] = useState<LeaveStatus>("pending");
 
   const [declineOpen, setDeclineOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
   const [declineReason, setDeclineReason] = useState("");
 
-  /* ------------------ FILTERS ------------------ */
+  /* ================= COMPANY CONTEXT ================= */
 
-  const rows =
-    view === "pending"
-      ? leaves.filter((l) => l.status === "pending")
-      : view === "approved"
-      ? leaves.filter((l) => l.status === "approved")
-      : leaves.filter((l) => l.status === "declined");
+  const notify = useCallback((msg: string) => {
+    console.error(msg);
+  }, []);
 
-  /* ------------------ ACTIONS ------------------ */
+  useEffect(() => {
+    getCompanyId()
+      .then(setCompanyId)
+      .catch(() => notify("User not linked to a company"));
+  }, [notify]);
 
-  const approveLeave = (leave: LeaveRequest) => {
+  /* ================= FIREBASE LOAD ================= */
+
+  useEffect(() => {
+    if (!companyId) return;
+
+    const companyRef = ref(db, `companies/${companyId}`);
+
+    return onValue(companyRef, (snap) => {
+      const data = snap.val();
+      if (!data) return;
+
+      const employees = data.employees || {};
+      const leaveRequests = data.leaveRequests || {};
+      const leaveBalances = data.leaveBalances || {};
+
+      const mappedLeaves: LeaveRequest[] = [];
+
+      Object.entries(leaveRequests).forEach(
+        ([employeeId, requests]: any) => {
+          Object.entries(requests).forEach(
+            ([leaveId, leave]: any) => {
+              mappedLeaves.push({
+                id: leaveId,
+                employeeId,
+                employee: `${employees[employeeId]?.firstName ?? ""} ${employees[employeeId]?.lastName ?? ""}`,
+                from: leave.from.replaceAll("/", "-"),
+                to: leave.to.replaceAll("/", "-"),
+                reason: leave.reason || "",
+                status: leave.status,
+              });
+            }
+          );
+        }
+      );
+
+      setLeaves(mappedLeaves);
+      setBalances(leaveBalances);
+    });
+  }, [companyId]);
+
+  /* ================= FILTER ================= */
+
+  const rows = leaves.filter((l) => l.status === view);
+
+  /* ================= ACTIONS ================= */
+
+  const approveLeave = async (leave: LeaveRequest) => {
+    if (!companyId) return;
+
     const days = calculateDays(leave.from, leave.to);
-    const balance = balances[leave.employee] ?? 0;
+    const balance = balances[leave.employeeId] ?? 0;
 
     if (balance < days) {
       alert("Insufficient leave balance");
       return;
     }
 
-    setLeaves((prev) =>
-      prev.map((l) =>
-        l.id === leave.id ? { ...l, status: "approved" } : l
-      )
-    );
-
-    setBalances((prev) => ({
-      ...prev,
-      [leave.employee]: prev[leave.employee] - days,
-    }));
+    await update(ref(db), {
+      [`companies/${companyId}/leaveRequests/${leave.employeeId}/${leave.id}/status`]:
+        "approved",
+      [`companies/${companyId}/leaveBalances/${leave.employeeId}`]:
+        balance - days,
+    });
   };
 
   const openDecline = (leave: LeaveRequest) => {
@@ -134,21 +144,21 @@ export default function LeaveRequest() {
     setDeclineOpen(true);
   };
 
-  const confirmDecline = () => {
-    if (!selectedLeave) return;
+  const confirmDecline = async () => {
+    if (!selectedLeave || !companyId) return;
 
-    setLeaves((prev) =>
-      prev.map((l) =>
-        l.id === selectedLeave.id
-          ? { ...l, status: "declined", declineReason }
-          : l
-      )
-    );
+    await update(ref(db), {
+      [`companies/${companyId}/leaveRequests/${selectedLeave.employeeId}/${selectedLeave.id}/status`]:
+        "declined",
+      [`companies/${companyId}/leaveRequests/${selectedLeave.employeeId}/${selectedLeave.id}/declineReason`]:
+        declineReason,
+    });
 
     setDeclineOpen(false);
     setSelectedLeave(null);
   };
 
+  /* ================= UI ================= */
 
   return (
     <Layout currentPage="Leave Request">
@@ -157,29 +167,22 @@ export default function LeaveRequest() {
           Leave Management
         </Typography>
 
-        {/* ================== FILTER BUTTONS ================== */}
+        {/* FILTERS */}
         <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
-          <Button
-            variant={view === "pending" ? "contained" : "outlined"}
-            onClick={() => setView("pending")}
-          >
-            Pending
-          </Button>
-          <Button
-            variant={view === "approved" ? "contained" : "outlined"}
-            onClick={() => setView("approved")}
-          >
-            Approved
-          </Button>
-          <Button
-            variant={view === "declined" ? "contained" : "outlined"}
-            onClick={() => setView("declined")}
-          >
-            Declined
-          </Button>
+          {(["pending", "approved", "declined"] as LeaveStatus[]).map(
+            (status) => (
+              <Button
+                key={status}
+                variant={view === status ? "contained" : "outlined"}
+                onClick={() => setView(status)}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </Button>
+            )
+          )}
         </Stack>
 
-        {/* ================== TABLE ================== */}
+        {/* TABLE */}
         <Paper>
           <Table>
             <TableHead>
@@ -197,7 +200,7 @@ export default function LeaveRequest() {
             <TableBody>
               {rows.map((leave) => {
                 const days = calculateDays(leave.from, leave.to);
-                const balance = balances[leave.employee] ?? 0;
+                const balance = balances[leave.employeeId] ?? 0;
 
                 return (
                   <TableRow key={leave.id}>
@@ -253,7 +256,7 @@ export default function LeaveRequest() {
           </Table>
         </Paper>
 
-        {/* ================== DECLINE DIALOG ================== */}
+        {/* DECLINE DIALOG */}
         <Dialog open={declineOpen} onClose={() => setDeclineOpen(false)} fullWidth>
           <DialogTitle>Decline Leave</DialogTitle>
           <DialogContent>
@@ -262,7 +265,6 @@ export default function LeaveRequest() {
             </Typography>
             <TextField
               label="Reason (optional)"
-              type="text"
               fullWidth
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
@@ -270,11 +272,7 @@ export default function LeaveRequest() {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDeclineOpen(false)}>Cancel</Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={confirmDecline}
-            >
+            <Button variant="contained" color="error" onClick={confirmDecline}>
               Decline
             </Button>
           </DialogActions>
