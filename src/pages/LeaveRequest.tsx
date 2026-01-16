@@ -96,8 +96,9 @@ export default function LeaveRequestPage() {
           mappedLeaves.push({
             id: leaveId,
             employeeId,
-            employee: `${employees[employeeId]?.firstName ?? ""} ${employees[employeeId]?.lastName ?? ""
-              }`,
+            employee: `${employees[employeeId]?.firstName ?? ""} ${
+              employees[employeeId]?.lastName ?? ""
+            }`,
             from: leave.from.replaceAll("/", "-"),
             to: leave.to.replaceAll("/", "-"),
             reason: leave.reason || "",
@@ -230,31 +231,41 @@ export default function LeaveRequestPage() {
                         color={balance <= 3 ? "error" : "default"}
                       />
                     </TableCell>
-                    <TableCell>
-                      <Stack spacing={0.5}>
-                        <Chip
-                          size="small"
-                          label={leave.status}
-                          color={
-                            leave.status === "approved"
-                              ? "success"
-                              : leave.status === "pending"
-                                ? "warning"
-                                : "error"
-                          }
-                        />
+                    <Stack spacing={0.5}>
+                      <Chip
+                        size="small"
+                        label={leave.status}
+                        color={
+                          leave.status === "approved"
+                            ? "success"
+                            : leave.status === "pending"
+                            ? "warning"
+                            : "error"
+                        }
+                      />
 
-                        {leave.status === "declined" && leave.declineReason && (
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ fontStyle: "italic" }}
-                          >
-                            Reason: {leave.declineReason}
-                          </Typography>
-                        )}
-                      </Stack>
-                    </TableCell>
+                      {/* PENDING → employee reason */}
+                      {leave.status === "pending" && leave.reason && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontStyle: "italic" }}
+                        >
+                          Requested: {leave.reason}
+                        </Typography>
+                      )}
+
+                      {/* DECLINED → manager reason */}
+                      {leave.status === "declined" && leave.declineReason && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontStyle: "italic" }}
+                        >
+                          Declined: {leave.declineReason}
+                        </Typography>
+                      )}
+                    </Stack>
 
                     {leave.status === "pending" && (
                       <TableCell align="right">
