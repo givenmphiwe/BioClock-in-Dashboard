@@ -13,11 +13,13 @@ import {
 } from "@mui/material";
 import { ref, get, update } from "firebase/database";
 import { db } from "../api/firebase";
+import { getCompanyId } from "../auth/authCompany";
 
 type Section = "hours" | "clocking" | "rates";
 
 export default function Settings() {
-  const companyId = "company_001";
+
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<Section>("hours");
 
   /* ===============================
@@ -34,6 +36,7 @@ export default function Settings() {
   const [autoClockOut, setAutoClockOut] = useState<string>("16:30");
   const [autoResolve, setAutoResolve] = useState<boolean>(true);
   const [requireReason, setRequireReason] = useState<boolean>(true);
+  const [payRates, setPayRates] = useState<any>({});
 
   const [occupation, setOccupation] = useState<string>("general_worker");
   const [hourly, setHourly] = useState<number>(28);
@@ -46,6 +49,7 @@ export default function Settings() {
   =============================== */
 
   useEffect(() => {
+     if (!companyId) return;
     const load = async () => {
       const snap = await get(ref(db, `companies/${companyId}/info/settings`));
       const s = snap.val();
@@ -68,7 +72,14 @@ export default function Settings() {
     };
 
     load();
-  }, [shiftType]);
+  }, [companyId,shiftType]);
+
+  useEffect(() => {
+  getCompanyId()
+    .then(setCompanyId)
+    .catch(console.error);
+}, []);
+
 
   /* ===============================
      SAVE FUNCTIONS
@@ -76,9 +87,17 @@ export default function Settings() {
 
   const saveWorkingHours = async () => {
     try {
-      console.log("Saving working hours:", { shiftType, startTime, endTime, dailyMinutes });
+      console.log("Saving working hours:", {
+        shiftType,
+        startTime,
+        endTime,
+        dailyMinutes,
+      });
       await update(
-        ref(db, `companies/${companyId}/info/settings/workingHours/${shiftType}`),
+        ref(
+          db,
+          `companies/${companyId}/info/settings/workingHours/${shiftType}`
+        ),
         {
           start: startTime,
           end: endTime,
@@ -118,6 +137,21 @@ export default function Settings() {
     );
     alert("Pay rate saved");
   };
+
+  useEffect(() => {
+    if (!companyId) return;
+    const loadRates = async () => {
+      const snap = await get(
+        ref(db, `companies/${companyId}/info/settings/payRates`)
+      );
+
+      if (snap.exists()) {
+        setPayRates(snap.val());
+      }
+    };
+
+    loadRates();
+  }, [companyId]);
 
   /* ===============================
      UI
@@ -237,48 +271,105 @@ export default function Settings() {
 
         {activeSection === "rates" && (
           <Paper sx={{ p: 3 }}>
-            <Stack spacing={2}>
-              <TextField
-                select
-                label="Occupation"
-                value={occupation}
-                onChange={(e) => setOccupation(e.target.value)}
-              >
-                <MenuItem value="general_worker">General Worker</MenuItem>
-                <MenuItem value="security_guard">Security Guard</MenuItem>
-                <MenuItem value="supervisor">Supervisor</MenuItem>
-                <MenuItem value="manager">Manager</MenuItem>
-              </TextField>
-              <TextField
-                label="Hourly Rate"
-                type="number"
-                value={hourly}
-                onChange={(e) => setHourly(Number(e.target.value))}
-              />
-              <TextField
-                label="Overtime Multiplier"
-                type="number"
-                value={overtime}
-                onChange={(e) => setOvertime(Number(e.target.value))}
-              />
-              <TextField
-                label="Weekend Multiplier"
-                type="number"
-                value={weekend}
-                onChange={(e) => setWeekend(Number(e.target.value))}
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={deductAbsent}
-                    onChange={(e) => setDeductAbsent(e.target.checked)}
+            <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+              {/* ================= LEFT: STORED RATES ================= */}
+              <Box sx={{ flex: 1 }}>
+                <Typography fontWeight={600} mb={1}>
+                  Saved Pay Rates
+                </Typography>
+
+                <Paper variant="outlined">
+                  <Box sx={{ p: 1 }}>
+                    <Stack spacing={1}>
+                      {Object.entries(payRates || {}).map(
+                        ([key, rate]: any) => (
+                          <Box
+                            key={key}
+                            sx={{
+                              p: 1.5,
+                              borderRadius: 1,
+
+                              cursor: "pointer",
+                              "&:hover": { background: "#8a8a8aff" },
+                            }}
+                            onClick={() => {
+                              setOccupation(key);
+                              setHourly(rate.hourly);
+                              setOvertime(rate.overtime);
+                              setWeekend(rate.weekend);
+                              setDeductAbsent(rate.deductAbsent);
+                            }}
+                          >
+                            <Typography fontWeight={600}>
+                              {key.replace("_", " ").toUpperCase()}
+                            </Typography>
+                            <Typography variant="body2">
+                              Hourly: R{rate.hourly} • OT: {rate.overtime}× •
+                              Weekend: {rate.weekend}×
+                            </Typography>
+                          </Box>
+                        )
+                      )}
+                    </Stack>
+                  </Box>
+                </Paper>
+              </Box>
+
+              {/* ================= RIGHT: EDIT FORM ================= */}
+              <Box sx={{ flex: 1 }}>
+                <Typography fontWeight={600} mb={1}>
+                  Edit Pay Rate
+                </Typography>
+
+                <Stack spacing={2}>
+                  <TextField
+                    select
+                    label="Occupation"
+                    value={occupation}
+                    onChange={(e) => setOccupation(e.target.value)}
+                  >
+                    <MenuItem value="general_worker">General Worker</MenuItem>
+                    <MenuItem value="security_guard">Security Guard</MenuItem>
+                    <MenuItem value="supervisor">Supervisor</MenuItem>
+                    <MenuItem value="manager">Manager</MenuItem>
+                  </TextField>
+
+                  <TextField
+                    label="Hourly Rate (R)"
+                    type="number"
+                    value={hourly}
+                    onChange={(e) => setHourly(Number(e.target.value))}
                   />
-                }
-                label="Deduct for absence"
-              />
-              <Button variant="contained" onClick={savePayRates}>
-                Save
-              </Button>
+
+                  <TextField
+                    label="Overtime Multiplier"
+                    type="number"
+                    value={overtime}
+                    onChange={(e) => setOvertime(Number(e.target.value))}
+                  />
+
+                  <TextField
+                    label="Weekend Multiplier"
+                    type="number"
+                    value={weekend}
+                    onChange={(e) => setWeekend(Number(e.target.value))}
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={deductAbsent}
+                        onChange={(e) => setDeductAbsent(e.target.checked)}
+                      />
+                    }
+                    label="Deduct for absence"
+                  />
+
+                  <Button variant="contained" onClick={savePayRates}>
+                    Save Rate
+                  </Button>
+                </Stack>
+              </Box>
             </Stack>
           </Paper>
         )}
