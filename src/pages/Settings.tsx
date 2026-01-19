@@ -18,7 +18,6 @@ import { getCompanyId } from "../auth/authCompany";
 type Section = "hours" | "clocking" | "rates";
 
 export default function Settings() {
-
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<Section>("hours");
 
@@ -38,7 +37,7 @@ export default function Settings() {
   const [requireReason, setRequireReason] = useState<boolean>(true);
   const [payRates, setPayRates] = useState<any>({});
 
-  const [occupation, setOccupation] = useState<string>("general_worker");
+  const [occupation, setOccupation] = useState<string>("");
   const [hourly, setHourly] = useState<number>(28);
   const [overtime, setOvertime] = useState<number>(1.5);
   const [weekend, setWeekend] = useState<number>(2);
@@ -49,7 +48,7 @@ export default function Settings() {
   =============================== */
 
   useEffect(() => {
-     if (!companyId) return;
+    if (!companyId) return;
     const load = async () => {
       const snap = await get(ref(db, `companies/${companyId}/info/settings`));
       const s = snap.val();
@@ -72,14 +71,11 @@ export default function Settings() {
     };
 
     load();
-  }, [companyId,shiftType]);
+  }, [companyId, shiftType]);
 
   useEffect(() => {
-  getCompanyId()
-    .then(setCompanyId)
-    .catch(console.error);
-}, []);
-
+    getCompanyId().then(setCompanyId).catch(console.error);
+  }, []);
 
   /* ===============================
      SAVE FUNCTIONS
@@ -323,16 +319,16 @@ export default function Settings() {
 
                 <Stack spacing={2}>
                   <TextField
-                    select
-                    label="Occupation"
+                    label="Occupation Name"
+                    placeholder="e.g. Cleaner, Driver, Supervisor"
                     value={occupation}
-                    onChange={(e) => setOccupation(e.target.value)}
-                  >
-                    <MenuItem value="general_worker">General Worker</MenuItem>
-                    <MenuItem value="security_guard">Security Guard</MenuItem>
-                    <MenuItem value="supervisor">Supervisor</MenuItem>
-                    <MenuItem value="manager">Manager</MenuItem>
-                  </TextField>
+                    
+                    onChange={(e) =>
+                      setOccupation(
+                        e.target.value.toLowerCase().replace(/\s+/g, "_")
+                      )
+                    }
+                  />
 
                   <TextField
                     label="Hourly Rate (R)"
