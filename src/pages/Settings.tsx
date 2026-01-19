@@ -351,7 +351,7 @@ export default function Settings() {
                     onChange={(e) => setWeekend(Number(e.target.value))}
                   />
 
-                  <FormControlLabel
+                  {/* <FormControlLabel
                     control={
                       <Switch
                         checked={deductAbsent}
@@ -359,7 +359,7 @@ export default function Settings() {
                       />
                     }
                     label="Deduct for absence"
-                  />
+                  /> */}
 
                   <Button variant="contained" onClick={savePayRates}>
                     Save Rate
