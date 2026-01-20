@@ -275,7 +275,7 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
             >
               Sign in with Google
             </Button>
-            <Button
+            {/* <Button
               fullWidth
               variant="outlined"
               onClick={async () => {
@@ -298,7 +298,7 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
               startIcon={<FacebookIcon />}
             >
               Sign in with Facebook
-            </Button>
+            </Button> */}
             <Typography sx={{ textAlign: "center" }}>
               Don&apos;t have an account?{" "}
               <Link
