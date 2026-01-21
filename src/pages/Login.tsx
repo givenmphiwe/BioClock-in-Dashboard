@@ -111,15 +111,14 @@ export default function Login(props: { disableCustomTheme?: boolean }) {
   };
 
   const cleanError = (error: string) => {
-  if (!error) return '';
+    if (!error) return "";
 
-  return error
-    .replace(/firebase:/i, '')
-    .replace('Error (auth/', '')
-    .replace(').', '')
-    .trim();
-};
-
+    return error
+      .replace(/firebase:/i, "")
+      .replace("Error (auth/", "")
+      .replace(").", "")
+      .trim();
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
