@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { styled } from '@mui/material/styles';
 import Avatar from '@mui/material/Avatar';
 import MuiDrawer, { drawerClasses } from '@mui/material/Drawer';
@@ -10,6 +9,7 @@ import SelectContent from './SelectContent';
 import MenuContent from './MenuContent';
 import CardAlert from './CardAlert';
 import OptionsMenu from './OptionsMenu';
+import { useAuth } from '../auth/AuthProvider';
 
 
 const drawerWidth = 240;
@@ -31,6 +31,10 @@ interface SideMenuProps {
 }
 
 export default function SideMenu({ selectedIndex = 0, onMenuSelect }: SideMenuProps) {
+  const { user } = useAuth();
+  const displayName = user?.displayName || user?.email || 'User';
+  const email = user?.email || '';
+
   return (
     <Drawer
       variant="permanent"
@@ -74,17 +78,19 @@ export default function SideMenu({ selectedIndex = 0, onMenuSelect }: SideMenuPr
       >
         <Avatar
           sizes="small"
-          alt="Riley Carter"
-          src="/static/images/avatar/7.jpg"
+          alt={displayName}
+          src={user?.photoURL ?? undefined}
           sx={{ width: 36, height: 36 }}
         />
         <Box sx={{ mr: 'auto' }}>
           <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: '16px' }}>
-            Riley Carter
+            {displayName}
           </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            riley@email.com
-          </Typography>
+          {!!email && (
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {email}
+            </Typography>
+          )}
         </Box>
         <OptionsMenu />
       </Stack>

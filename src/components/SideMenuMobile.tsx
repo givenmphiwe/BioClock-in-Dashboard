@@ -1,4 +1,3 @@
-import * as React from 'react';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
@@ -10,6 +9,9 @@ import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import MenuButton from './MenuButton';
 import MenuContent from './MenuContent';
 import CardAlert from './CardAlert';
+import { useAuth } from '../auth/AuthProvider';
+import { useNavigate } from 'react-router-dom';
+import { clearSession } from '../auth/session';
 
 interface SideMenuMobileProps {
   open: boolean | undefined;
@@ -19,10 +21,25 @@ interface SideMenuMobileProps {
 }
 
 export default function SideMenuMobile({ open, toggleDrawer, selectedIndex = 0, onMenuSelect }: SideMenuMobileProps) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const displayName = user?.displayName || user?.email || 'User';
+  const email = user?.email || '';
+
   // Wrap onMenuSelect to close drawer after selection
   const handleMenuSelect = (index: number) => {
     if (onMenuSelect) onMenuSelect(index);
     toggleDrawer(false)();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      clearSession();
+      toggleDrawer(false)();
+      navigate('/login', { replace: true });
+    }
   };
   return (
     <Drawer
@@ -50,13 +67,20 @@ export default function SideMenuMobile({ open, toggleDrawer, selectedIndex = 0, 
           >
             <Avatar
               sizes="small"
-              alt="Riley Carter"
-              src="/static/images/avatar/7.jpg"
+              alt={displayName}
+              src={user?.photoURL ?? undefined}
               sx={{ width: 24, height: 24 }}
             />
-            <Typography component="p" variant="h6">
-              Riley Carter
-            </Typography>
+            <Stack sx={{ minWidth: 0 }}>
+              <Typography component="p" variant="h6" noWrap>
+                {displayName}
+              </Typography>
+              {!!email && (
+                <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
+                  {email}
+                </Typography>
+              )}
+            </Stack>
           </Stack>
           <MenuButton showBadge>
             <NotificationsRoundedIcon />
@@ -69,7 +93,12 @@ export default function SideMenuMobile({ open, toggleDrawer, selectedIndex = 0, 
         </Stack>
         <CardAlert />
         <Stack sx={{ p: 2 }}>
-          <Button variant="outlined" fullWidth startIcon={<LogoutRoundedIcon />}>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<LogoutRoundedIcon />}
+            onClick={handleLogout}
+          >
             Logout
           </Button>
         </Stack>

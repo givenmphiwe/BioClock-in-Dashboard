@@ -1,6 +1,8 @@
 const KEYS = {
   ACCESS: "auth:accessToken",
+  REFRESH: "auth:refreshToken",
   EXPIRES: "auth:expiresAt",
+  USER: "auth:user",
   REMEMBER: "auth:remember",
 } as const;
 
@@ -27,4 +29,11 @@ export function isSessionValid(): boolean {
 
   const skewMs = 20_000; // 20s safety window
   return Date.now() + skewMs < expMs;
+}
+
+export function clearSession(): void {
+  const keys = [KEYS.ACCESS, KEYS.REFRESH, KEYS.EXPIRES, KEYS.USER, KEYS.REMEMBER];
+  for (const storage of [localStorage, sessionStorage]) {
+    for (const key of keys) storage.removeItem(key);
+  }
 }
