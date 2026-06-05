@@ -21,6 +21,7 @@ const mainListItems = [
   { text: 'Users', icon: <AssignmentRoundedIcon /> },
   { text: 'Leave Requests', icon: <AnalyticsRoundedIcon /> },
   { text: 'Payroll', icon: <MonetizationOnRoundedIcon /> },
+  { text: 'Payslips', icon: <MonetizationOnRoundedIcon /> },
 ];
 
 const secondaryListItems = [

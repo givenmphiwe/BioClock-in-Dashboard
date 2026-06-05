@@ -358,7 +358,7 @@ export default function Payroll({ selectedDate, onDateChange }: PayrollProps) {
               </TableRow>
             </TableHead>
 
-            <TableBody>
+            <TableBody> 
               {filtered.map((emp) => (
                 <TableRow key={emp.id}>
                   <TableCell>{emp.name}</TableCell>
