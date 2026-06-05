@@ -9,11 +9,13 @@ export function ActionsCell({
   onPermissions,
   onRemove,
   onAssignEmployees,
+  onAssignLocation,
 }: {
   row: any;
   onPermissions: (user: any) => void;
   onRemove: (user: any) => void;
   onAssignEmployees: (user: any) => void;
+  onAssignLocation: (user: any) => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -43,6 +45,14 @@ export function ActionsCell({
           }}
         >
           Permissions
+        </MenuItem>
+       <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
+            onAssignLocation(row);
+          }}
+        >
+          Location Assign
         </MenuItem>
         <MenuItem
           onClick={() => {

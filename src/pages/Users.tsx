@@ -13,6 +13,7 @@ import { AddUserDialog } from "../modal/AddUserDialog";
 import { PermissionsDialog } from "../components/users/PermissionsDialog";
 import { RemoveUserDialog } from "../components/users/RemoveUserDialog";
 import { AssignEmployeesDialog } from "../components/users/AssignEmployeesDialog";
+import { AssignLocationDialog } from "../components/users/AssignLocationDialog"; 
 import { UserPermissions } from "../types/types";
 
 type PresenceMap = Record<string, { online: boolean }>;
@@ -26,6 +27,7 @@ export default function Users() {
   const [permUser, setPermUser] = useState<any | null>(null);
   const [removeUser, setRemoveUser] = useState<any | null>(null);
   const [assignUser, setAssignUser] = useState<any | null>(null);
+  const [locationUser, setLocationUser] = useState<any | null>(null);
 
   const [snack, setSnack] = useState({
     open: false,
@@ -57,18 +59,15 @@ export default function Users() {
   useEffect(() => {
     if (!companyId) return;
 
-    return onValue(
-      ref(db, `companies/${companyId}/users`),
-      (snap) => {
-        const data = snap.val() || {};
-        setUsers(
-          Object.keys(data).map((uid) => ({
-            uid,
-            ...data[uid],
-          }))
-        );
-      }
-    );
+    return onValue(ref(db, `companies/${companyId}/users`), (snap) => {
+      const data = snap.val() || {};
+      setUsers(
+        Object.keys(data).map((uid) => ({
+          uid,
+          ...data[uid],
+        }))
+      );
+    });
   }, [companyId]);
 
   /* ----------------------------------
@@ -77,12 +76,9 @@ export default function Users() {
   useEffect(() => {
     if (!companyId) return;
 
-    return onValue(
-      ref(db, `companies/${companyId}/presence`),
-      (snap) => {
-        setPresence(snap.val() || {});
-      }
-    );
+    return onValue(ref(db, `companies/${companyId}/presence`), (snap) => {
+      setPresence(snap.val() || {});
+    });
   }, [companyId]);
 
   const rows = useMemo(
@@ -93,6 +89,7 @@ export default function Users() {
         onPermissions: () => setPermUser(u),
         onRemove: () => setRemoveUser(u),
         onAssignEmployees: () => setAssignUser(u),
+        onAssignLocation: () => setLocationUser(u),
       })),
     [users, presence]
   );
@@ -103,10 +100,9 @@ export default function Users() {
   const savePermissions = async (permissions: UserPermissions) => {
     if (!permUser || !companyId) return;
 
-    await update(
-      ref(db, `companies/${companyId}/users/${permUser.uid}`),
-      { permissions }
-    );
+    await update(ref(db, `companies/${companyId}/users/${permUser.uid}`), {
+      permissions,
+    });
 
     notify("Permissions updated", "success");
     setPermUser(null);
@@ -118,9 +114,7 @@ export default function Users() {
   const confirmRemoveUser = async (user: any) => {
     if (!companyId) return;
 
-    await remove(
-      ref(db, `companies/${companyId}/users/${user.uid}`)
-    );
+    await remove(ref(db, `companies/${companyId}/users/${user.uid}`));
 
     await remove(ref(db, `userCompanies/${user.uid}`));
 
@@ -156,7 +150,14 @@ export default function Users() {
           onSave={savePermissions}
         />
 
-         <AssignEmployeesDialog
+        <AssignLocationDialog
+          open={!!locationUser}
+          user={locationUser}
+          onClose={() => setLocationUser(null)}
+          companyId={companyId}
+        />
+
+        <AssignEmployeesDialog
           open={!!assignUser}
           user={assignUser}
           onClose={() => setAssignUser(null)}
